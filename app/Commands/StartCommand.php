@@ -23,7 +23,6 @@ class StartCommand extends Command
         PhpComposeGenerator $phpComposeGenerator
     ): int {
         $results = [];
-        $allSuccess = true;
 
         // Generate configuration
         $configResult = $this->runStep('config', 'Generating configuration', function () use ($caddyfileGenerator, $phpComposeGenerator) {
@@ -33,7 +32,7 @@ class StartCommand extends Command
             return true;
         });
         $results['config'] = $configResult;
-        $allSuccess = $allSuccess && $configResult;
+        $allSuccess = $configResult;
 
         // Start services in order
         $services = ['dns', 'php', 'caddy', 'postgres', 'redis', 'mailpit'];
@@ -69,7 +68,7 @@ class StartCommand extends Command
         if ($this->wantsJson()) {
             try {
                 return (bool) $callback();
-            } catch (\Exception $e) {
+            } catch (\Exception) {
                 return false;
             }
         }
@@ -78,7 +77,7 @@ class StartCommand extends Command
         $this->task($label, function () use ($callback, &$result) {
             try {
                 $result = (bool) $callback();
-            } catch (\Exception $e) {
+            } catch (\Exception) {
                 $result = false;
             }
 

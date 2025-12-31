@@ -6,14 +6,11 @@ use Illuminate\Support\Facades\File;
 
 class PhpComposeGenerator
 {
-    protected ConfigManager $configManager;
-
     protected string $composePath;
 
-    public function __construct(ConfigManager $configManager)
+    public function __construct(protected ConfigManager $configManager)
     {
-        $this->configManager = $configManager;
-        $this->composePath = $configManager->getConfigPath().'/php/docker-compose.yml';
+        $this->composePath = $this->configManager->getConfigPath().'/php/docker-compose.yml';
     }
 
     public function generate(): void
@@ -59,7 +56,7 @@ networks:
         $mounts = '';
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
-            $containerPath = '/app/'.basename($path);
+            $containerPath = '/app/'.basename((string) $path);
             $mounts .= "      - {$expandedPath}:{$containerPath}\n";
         }
 

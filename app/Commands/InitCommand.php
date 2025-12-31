@@ -84,9 +84,7 @@ class InitCommand extends Command
         });
 
         // 4. Create docker network
-        $this->task('Creating Docker network', function () use ($dockerManager) {
-            return $dockerManager->createNetwork();
-        });
+        $this->task('Creating Docker network', $dockerManager->createNetwork(...));
 
         // 5. Build DNS container
         $this->task('Building DNS container', function () use ($dockerManager) {

@@ -54,7 +54,7 @@ class StopCommand extends Command
         if ($this->wantsJson()) {
             try {
                 return (bool) $callback();
-            } catch (\Exception $e) {
+            } catch (\Exception) {
                 return false;
             }
         }
@@ -63,7 +63,7 @@ class StopCommand extends Command
         $this->task($label, function () use ($callback, &$result) {
             try {
                 $result = (bool) $callback();
-            } catch (\Exception $e) {
+            } catch (\Exception) {
                 $result = false;
             }
 

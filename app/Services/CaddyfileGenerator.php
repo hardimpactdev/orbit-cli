@@ -7,20 +7,14 @@ use Illuminate\Support\Facades\Process;
 
 class CaddyfileGenerator
 {
-    protected ConfigManager $configManager;
-
-    protected SiteScanner $siteScanner;
-
     protected string $caddyfilePath;
 
     protected string $phpCaddyfilePath;
 
-    public function __construct(ConfigManager $configManager, SiteScanner $siteScanner)
+    public function __construct(protected ConfigManager $configManager, protected SiteScanner $siteScanner)
     {
-        $this->configManager = $configManager;
-        $this->siteScanner = $siteScanner;
-        $this->caddyfilePath = $configManager->getConfigPath().'/caddy/Caddyfile';
-        $this->phpCaddyfilePath = $configManager->getConfigPath().'/php/Caddyfile';
+        $this->caddyfilePath = $this->configManager->getConfigPath().'/caddy/Caddyfile';
+        $this->phpCaddyfilePath = $this->configManager->getConfigPath().'/php/Caddyfile';
     }
 
     public function generate(): void
@@ -94,7 +88,7 @@ class CaddyfileGenerator
             $expandedConfigPath = $this->expandPath($configPath);
             if (str_starts_with($hostPath, $expandedConfigPath)) {
                 $relativePath = substr($hostPath, strlen($expandedConfigPath));
-                $baseName = basename($configPath);
+                $baseName = basename((string) $configPath);
 
                 return "/app/{$baseName}{$relativePath}";
             }

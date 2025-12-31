@@ -116,7 +116,11 @@ class PhpCommand extends Command
     private function regenerateAndReload(CaddyfileGenerator $caddyfileGenerator): bool
     {
         if (! $this->wantsJson()) {
-            $this->task('Regenerating Caddyfile', fn () => $caddyfileGenerator->generate() || true);
+            $this->task('Regenerating Caddyfile', function () use ($caddyfileGenerator) {
+                $caddyfileGenerator->generate();
+
+                return true;
+            });
         } else {
             $caddyfileGenerator->generate();
         }

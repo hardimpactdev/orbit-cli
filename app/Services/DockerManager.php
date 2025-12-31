@@ -6,16 +6,13 @@ use Illuminate\Support\Facades\Process;
 
 class DockerManager
 {
-    protected ConfigManager $configManager;
-
     protected string $basePath;
 
     protected ?string $lastError = null;
 
-    public function __construct(ConfigManager $configManager)
+    public function __construct(protected ConfigManager $configManager)
     {
-        $this->configManager = $configManager;
-        $this->basePath = $configManager->getConfigPath();
+        $this->basePath = $this->configManager->getConfigPath();
     }
 
     public function getLastError(): ?string

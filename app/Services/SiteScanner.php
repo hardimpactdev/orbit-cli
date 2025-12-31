@@ -6,11 +6,8 @@ use Illuminate\Support\Facades\File;
 
 class SiteScanner
 {
-    protected ConfigManager $configManager;
-
-    public function __construct(ConfigManager $configManager)
+    public function __construct(protected ConfigManager $configManager)
     {
-        $this->configManager = $configManager;
     }
 
     public function scan(): array
@@ -32,7 +29,7 @@ class SiteScanner
             $directories = File::directories($expandedPath);
 
             foreach ($directories as $directory) {
-                $name = basename($directory);
+                $name = basename((string) $directory);
 
                 // First match wins - skip if we've already seen this name
                 if (isset($seenNames[$name])) {
@@ -70,12 +67,7 @@ class SiteScanner
             }
         }
 
-        // Check config overrides
-        if (isset($overrides[$name]['php_version'])) {
-            return $overrides[$name]['php_version'];
-        }
-
-        return $default;
+        return $overrides[$name]['php_version'] ?? $default;
     }
 
     protected function isValidPhpVersion(string $version): bool
