@@ -214,11 +214,68 @@ php launchpad <command>
 ./launchpad <command>
 ```
 
+### Quality Tools
+
+| Tool | Command | Description |
+|------|---------|-------------|
+| PHPStan (Larastan) | `./vendor/bin/phpstan analyse` | Static analysis at level 5 |
+| Rector | `./vendor/bin/rector` | Automated refactoring (PHP 8.2 rules) |
+| Pint | `./vendor/bin/pint` | Laravel code style formatting |
+| Pest | `./vendor/bin/pest` | Test suite (41 tests, 128 assertions) |
+
+### Running All Checks
+```bash
+./vendor/bin/rector --dry-run
+./vendor/bin/pint --test
+./vendor/bin/phpstan analyse --memory-limit=512M
+./vendor/bin/pest
+```
+
+### Test Coverage
+
+Tests are located in `tests/` directory:
+
+| Category | Tests |
+|----------|-------|
+| Commands | StatusCommand, SitesCommand, PhpCommand, StartCommand, StopCommand, RestartCommand, LogsCommand |
+| Services | SiteScanner, ConfigManager, CaddyfileGenerator, PhpComposeGenerator |
+| Enums | ExitCode |
+
+### Git Hooks
+
+Pre-commit hook runs all quality checks. Enable with:
+```bash
+git config core.hooksPath .githooks
+```
+
+### CI/CD
+
+- **CI Workflow** (`.github/workflows/ci.yml`) - Runs on push/PR to main: Pint, Rector, PHPStan, Pest
+- **Release Workflow** (`.github/workflows/release.yml`) - Builds PHAR on tag push
+
 ### Testing JSON Output
 ```bash
 php launchpad status --json | jq .
 php launchpad sites --json | jq '.data.sites'
 ```
+
+## Claude Code Integration
+
+### Hooks
+
+The project includes Claude Code hooks (`.claude/hooks/php-checks.sh`) that automatically run when PHP files are modified:
+
+1. **Rector** - Applies automated refactoring
+2. **Pint** - Formats code
+3. **PHPStan** - Static analysis
+4. **Pest** - Runs tests
+5. **Log check** - Scans `laravel.log` for new errors
+
+### Skills
+
+Available Claude Code skills in `.claude/skills/`:
+
+- **release-version** - Automates version releases using `gh` CLI
 
 ## Integration with Desktop App
 
