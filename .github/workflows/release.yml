@@ -16,7 +16,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, xml, json
           tools: composer:v2
           ini-values: phar.readonly=0
@@ -31,9 +31,6 @@ jobs:
 
       - name: Compile PHAR
         run: php box.phar compile
-
-      - name: Rename PHAR
-        run: mv application.phar launchpad.phar
 
       - name: Generate checksum
         run: sha256sum launchpad.phar > checksums.txt
