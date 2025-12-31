@@ -79,7 +79,7 @@ class PhpCommand extends Command
         }
 
         if (! in_array($version, $this->validVersions)) {
-            $message = 'Invalid PHP version. Valid versions: ' . implode(', ', $this->validVersions);
+            $message = 'Invalid PHP version. Valid versions: '.implode(', ', $this->validVersions);
             if ($this->wantsJson()) {
                 return $this->outputJsonError($message, ExitCode::InvalidArguments->value, [
                     'valid_versions' => $this->validVersions,

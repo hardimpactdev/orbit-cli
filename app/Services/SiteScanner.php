@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\File;
 
 class SiteScanner
 {
-    public function __construct(protected ConfigManager $configManager)
-    {
-    }
+    public function __construct(protected ConfigManager $configManager) {}
 
     public function scan(): array
     {

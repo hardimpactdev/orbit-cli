@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo "Running pre-commit checks..."
+
+# Check if any PHP files are staged
+STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.php$')
+
+if [ -z "$STAGED_PHP_FILES" ]; then
+    echo "No PHP files staged, skipping checks."
+    exit 0
+fi
+
+echo ""
+echo "Running Rector..."
+./vendor/bin/rector --dry-run
+if [ $? -ne 0 ]; then
+    echo "Rector found issues. Run './vendor/bin/rector' to fix them."
+    exit 1
+fi
+
+echo ""
+echo "Running Pint..."
+./vendor/bin/pint --test
+if [ $? -ne 0 ]; then
+    echo "Pint found code style issues. Run './vendor/bin/pint' to fix them."
+    exit 1
+fi
+
+echo ""
+echo "Running PHPStan..."
+./vendor/bin/phpstan analyse --memory-limit=512M
+if [ $? -ne 0 ]; then
+    echo "PHPStan found errors."
+    exit 1
+fi
+
+echo ""
+echo "Running tests..."
+./vendor/bin/pest
+if [ $? -ne 0 ]; then
+    echo "Tests failed."
+    exit 1
+fi
+
+echo ""
+echo "All checks passed!"
+exit 0

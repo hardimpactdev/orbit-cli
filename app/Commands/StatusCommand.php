@@ -65,7 +65,7 @@ class StatusCommand extends Command
         $this->newLine();
 
         if ($isRunning) {
-            $this->info("  Launchpad is running ({$runningCount}/" . count($this->containers) . ' services)');
+            $this->info("  Launchpad is running ({$runningCount}/".count($this->containers).' services)');
         } else {
             $this->warn('  Launchpad is stopped');
         }
@@ -81,10 +81,10 @@ class StatusCommand extends Command
         }
 
         $this->newLine();
-        $this->line('  <fg=cyan>Sites:</> ' . count($sites));
-        $this->line('  <fg=cyan>Config:</> ' . $configManager->getConfigPath());
-        $this->line('  <fg=cyan>TLD:</> .' . $configManager->getTld());
-        $this->line('  <fg=cyan>Default PHP:</> ' . $configManager->getDefaultPhpVersion());
+        $this->line('  <fg=cyan>Sites:</> '.count($sites));
+        $this->line('  <fg=cyan>Config:</> '.$configManager->getConfigPath());
+        $this->line('  <fg=cyan>TLD:</> .'.$configManager->getTld());
+        $this->line('  <fg=cyan>Default PHP:</> '.$configManager->getDefaultPhpVersion());
         $this->newLine();
 
         return self::SUCCESS;

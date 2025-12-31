@@ -29,11 +29,11 @@ class CaddyfileGenerator
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
         $defaultPhpContainer = $this->getContainerName($defaultPhp);
 
-        $caddyfile = "{
+        $caddyfile = '{
     local_certs
 }
 
-";
+';
 
         // Generate explicit entry for each site (wildcard certs don't work in browsers)
         foreach ($sites as $site) {
@@ -57,13 +57,13 @@ class CaddyfileGenerator
         $sites = $this->siteScanner->scan();
         $paths = $this->configManager->getPaths();
 
-        $caddyfile = "{
+        $caddyfile = '{
     frankenphp
     order php_server before file_server
     auto_https off
 }
 
-";
+';
 
         foreach ($sites as $site) {
             $dockerPath = $this->getDockerPath($site['path'], $paths);
