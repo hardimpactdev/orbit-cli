@@ -17,6 +17,7 @@ class PhpComposeGenerator
     {
         $paths = $this->configManager->getPaths();
         $volumeMounts = $this->generateVolumeMounts($paths);
+        $worktreeMount = $this->generateWorktreeMount();
 
         $compose = "services:
   php-83:
@@ -28,7 +29,7 @@ class PhpComposeGenerator
     ports:
       - \"8083:8080\"
     volumes:
-{$volumeMounts}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -43,7 +44,7 @@ class PhpComposeGenerator
     ports:
       - \"8084:8080\"
     volumes:
-{$volumeMounts}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -67,6 +68,18 @@ networks:
         }
 
         return $mounts;
+    }
+
+    protected function generateWorktreeMount(): string
+    {
+        // Mount the vibe-kanban worktrees directory if it exists
+        $worktreesPath = '/var/tmp/vibe-kanban/worktrees';
+
+        if (File::isDirectory($worktreesPath)) {
+            return "      - {$worktreesPath}:/worktrees\n";
+        }
+
+        return '';
     }
 
     protected function expandPath(string $path): string

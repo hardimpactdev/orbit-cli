@@ -9,8 +9,8 @@ beforeEach(function () {
 
 it('scans directories and returns sites', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
-    mkdir($tempDir.'/project1', 0755, true);
-    mkdir($tempDir.'/project2', 0755, true);
+    mkdir($tempDir.'/project1/public', 0755, true);
+    mkdir($tempDir.'/project2/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
@@ -27,14 +27,16 @@ it('scans directories and returns sites', function () {
     expect($sites[1]['name'])->toBe('project2');
 
     // Cleanup
+    rmdir($tempDir.'/project1/public');
     rmdir($tempDir.'/project1');
+    rmdir($tempDir.'/project2/public');
     rmdir($tempDir.'/project2');
     rmdir($tempDir);
 });
 
 it('respects php-version file', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
-    mkdir($tempDir.'/myproject', 0755, true);
+    mkdir($tempDir.'/myproject/public', 0755, true);
     file_put_contents($tempDir.'/myproject/.php-version', '8.4');
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
@@ -51,13 +53,14 @@ it('respects php-version file', function () {
 
     // Cleanup
     unlink($tempDir.'/myproject/.php-version');
+    rmdir($tempDir.'/myproject/public');
     rmdir($tempDir.'/myproject');
     rmdir($tempDir);
 });
 
 it('respects site overrides from config', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
-    mkdir($tempDir.'/myproject', 0755, true);
+    mkdir($tempDir.'/myproject/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
@@ -74,13 +77,14 @@ it('respects site overrides from config', function () {
     expect($sites[0]['has_custom_php'])->toBeTrue();
 
     // Cleanup
+    rmdir($tempDir.'/myproject/public');
     rmdir($tempDir.'/myproject');
     rmdir($tempDir);
 });
 
 it('finds a site by name', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
-    mkdir($tempDir.'/myproject', 0755, true);
+    mkdir($tempDir.'/myproject/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
@@ -94,6 +98,7 @@ it('finds a site by name', function () {
     expect($site['name'])->toBe('myproject');
 
     // Cleanup
+    rmdir($tempDir.'/myproject/public');
     rmdir($tempDir.'/myproject');
     rmdir($tempDir);
 });
@@ -131,8 +136,8 @@ it('skips invalid directories', function () {
 it('respects custom path overrides from config', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
     $nestedDir = $tempDir.'/parent/nested/myproject';
-    mkdir($nestedDir, 0755, true);
-    mkdir($tempDir.'/myproject', 0755, true); // Regular project with same name
+    mkdir($nestedDir.'/public', 0755, true);
+    mkdir($tempDir.'/myproject/public', 0755, true); // Regular project with same name
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
@@ -150,7 +155,9 @@ it('respects custom path overrides from config', function () {
     expect($myprojectSite['path'])->toBe($nestedDir);
 
     // Cleanup
+    rmdir($tempDir.'/myproject/public');
     rmdir($tempDir.'/myproject');
+    rmdir($nestedDir.'/public');
     rmdir($nestedDir);
     rmdir($tempDir.'/parent/nested');
     rmdir($tempDir.'/parent');
@@ -161,7 +168,7 @@ it('includes custom path sites even if not in scanned paths', function () {
     $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
     $customDir = sys_get_temp_dir().'/launchpad-custom-'.uniqid();
     mkdir($tempDir, 0755, true);
-    mkdir($customDir, 0755, true);
+    mkdir($customDir.'/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
@@ -179,6 +186,7 @@ it('includes custom path sites even if not in scanned paths', function () {
     expect($sites[0]['domain'])->toBe('customsite.test');
 
     // Cleanup
+    rmdir($customDir.'/public');
     rmdir($customDir);
     rmdir($tempDir);
 });

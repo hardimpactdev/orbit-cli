@@ -57,9 +57,7 @@ class RebuildCommand extends Command
 
         // Stop PHP containers first
         if (! $this->wantsJson()) {
-            $this->task('Stopping PHP containers', function () use ($dockerManager) {
-                return $dockerManager->stop('php');
-            });
+            $this->task('Stopping PHP containers', fn () => $dockerManager->stop('php'));
         } else {
             $dockerManager->stop('php');
         }
@@ -86,9 +84,7 @@ class RebuildCommand extends Command
 
         // Start PHP containers
         if (! $this->wantsJson()) {
-            $this->task('Starting PHP containers', function () use ($dockerManager) {
-                return $dockerManager->start('php');
-            });
+            $this->task('Starting PHP containers', fn () => $dockerManager->start('php'));
 
             $this->newLine();
             $this->info('PHP images rebuilt with Redis and other extensions!');

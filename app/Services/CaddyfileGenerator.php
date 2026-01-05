@@ -11,8 +11,11 @@ class CaddyfileGenerator
 
     protected string $phpCaddyfilePath;
 
-    public function __construct(protected ConfigManager $configManager, protected SiteScanner $siteScanner)
-    {
+    public function __construct(
+        protected ConfigManager $configManager,
+        protected SiteScanner $siteScanner,
+        protected ?WorktreeService $worktreeService = null
+    ) {
         $this->caddyfilePath = $this->configManager->getConfigPath().'/caddy/Caddyfile';
         $this->phpCaddyfilePath = $this->configManager->getConfigPath().'/php/Caddyfile';
     }
@@ -49,6 +52,19 @@ class CaddyfileGenerator
 ";
         }
 
+        // Generate entries for worktrees
+        $worktrees = $this->getWorktreesForCaddy();
+        foreach ($worktrees as $worktree) {
+            $container = $this->getContainerName($worktree['php_version']);
+
+            $caddyfile .= "{$worktree['domain']} {
+    tls internal
+    reverse_proxy {$container}:8080
+}
+
+";
+        }
+
         File::put($this->caddyfilePath, $caddyfile);
     }
 
@@ -68,8 +84,38 @@ class CaddyfileGenerator
         foreach ($sites as $site) {
             $dockerPath = $this->getDockerPath($site['path'], $paths);
             $root = $this->getDocumentRoot($dockerPath);
+            $hotFile = $site['path'].'/public/hot';
+            $hasVite = file_exists($hotFile);
 
-            $caddyfile .= "http://{$site['domain']}:8080 {
+            $caddyfile .= "http://{$site['domain']}:8080 {\n";
+            $caddyfile .= "    root * {$root}\n";
+
+            if ($hasVite) {
+                $caddyfile .= "\n";
+                $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/*\n";
+                $caddyfile .= "    reverse_proxy @vite 172.18.0.1:5173\n";
+                $caddyfile .= "\n";
+                $caddyfile .= "    @ws {\n";
+                $caddyfile .= "        header Connection *Upgrade*\n";
+                $caddyfile .= "        header Upgrade websocket\n";
+                $caddyfile .= "    }\n";
+                $caddyfile .= "    reverse_proxy @ws 172.18.0.1:5173\n";
+                $caddyfile .= "\n";
+            }
+
+            $caddyfile .= "    php_server\n";
+            $caddyfile .= "}\n\n";
+        }
+
+        // Generate entries for worktrees
+        $worktrees = $this->getWorktreesForCaddy();
+        foreach ($worktrees as $worktree) {
+            // Worktrees are typically outside the configured paths, so we need
+            // to mount them separately. For now, we'll use a direct path mapping.
+            $dockerPath = $this->getWorktreeDockerPath($worktree['path']);
+            $root = $this->getDocumentRoot($dockerPath);
+
+            $caddyfile .= "http://{$worktree['domain']}:8080 {
     root * {$root}
     php_server
 }
@@ -94,6 +140,20 @@ class CaddyfileGenerator
             }
         }
 
+        return $hostPath;
+    }
+
+    protected function getWorktreeDockerPath(string $hostPath): string
+    {
+        // Worktrees are mounted at /worktrees in the container
+        // /var/tmp/vibe-kanban/worktrees/task-id/project -> /worktrees/task-id/project
+        if (str_starts_with($hostPath, '/var/tmp/vibe-kanban/worktrees/')) {
+            $relativePath = substr($hostPath, strlen('/var/tmp/vibe-kanban/worktrees/'));
+
+            return "/worktrees/{$relativePath}";
+        }
+
+        // Fallback: try to use the path directly
         return $hostPath;
     }
 
@@ -133,5 +193,20 @@ class CaddyfileGenerator
         $versionNumber = str_replace('.', '', $version);
 
         return "launchpad-php-{$versionNumber}";
+    }
+
+    protected function getWorktreesForCaddy(): array
+    {
+        if ($this->worktreeService === null) {
+            // Lazy load to avoid circular dependency
+            $this->worktreeService = app(WorktreeService::class);
+        }
+
+        try {
+            return $this->worktreeService->getLinkedWorktreesForCaddy();
+        } catch (\Exception) {
+            // If worktree service fails, return empty array
+            return [];
+        }
     }
 }

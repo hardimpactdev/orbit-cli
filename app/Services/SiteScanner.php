@@ -51,6 +51,11 @@ class SiteScanner
             foreach ($directories as $directory) {
                 $name = basename((string) $directory);
 
+                // Skip projects without a public folder (not web apps)
+                if (! File::isDirectory($directory.'/public')) {
+                    continue;
+                }
+
                 // Skip if we've already seen this name (custom sites take precedence)
                 if (isset($seenNames[$name])) {
                     continue;
@@ -72,7 +77,7 @@ class SiteScanner
             }
         }
 
-        usort($sites, fn ($a, $b) => strcmp($a['name'], $b['name']));
+        usort($sites, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
         return $sites;
     }
