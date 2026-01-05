@@ -73,6 +73,53 @@ Make sure `~/.local/bin` is in your PATH.
 | Mailpit | 1025, 8025 | Mail catcher (SMTP: 1025, Web UI: 8025) |
 | DNS | 53 | Local DNS resolver for .test domains |
 
+## Configuration
+
+Launchpad stores its configuration at `~/.config/launchpad/config.json`. You can customize:
+
+### Paths
+
+Add directories to scan for projects:
+
+```json
+{
+  "paths": ["~/projects", "~/clients"]
+}
+```
+
+### Custom Site Paths
+
+Override the auto-detected path for any site. Useful for nested projects:
+
+```json
+{
+  "sites": {
+    "mysite": {
+      "path": "~/projects/monorepo/apps/mysite"
+    }
+  }
+}
+```
+
+### Default PHP Version
+
+```json
+{
+  "default_php_version": "8.4"
+}
+```
+
+### TLD
+
+Change the top-level domain (default: `test`):
+
+```json
+{
+  "tld": "local"
+}
+```
+
+
 ## Requirements
 
 - Docker
