@@ -17,6 +17,28 @@ class SiteScanner
         $siteOverrides = $this->configManager->getSiteOverrides();
         $seenNames = [];
 
+        // First, process custom sites with explicit paths defined in config
+        foreach ($siteOverrides as $name => $override) {
+            if (isset($override['path'])) {
+                $customPath = $this->expandPath($override['path']);
+
+                if (File::isDirectory($customPath)) {
+                    $seenNames[$name] = true;
+                    $phpVersion = $this->detectPhpVersion($customPath, $name, $siteOverrides, $defaultPhp);
+
+                    $sites[] = [
+                        'name' => $name,
+                        'domain' => "{$name}.{$tld}",
+                        'path' => $customPath,
+                        'php_version' => $phpVersion,
+                        'has_custom_php' => $phpVersion !== $defaultPhp,
+                        'secure' => true,
+                    ];
+                }
+            }
+        }
+
+        // Then scan configured paths for auto-discovered sites
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
 
@@ -29,7 +51,7 @@ class SiteScanner
             foreach ($directories as $directory) {
                 $name = basename((string) $directory);
 
-                // First match wins - skip if we've already seen this name
+                // Skip if we've already seen this name (custom sites take precedence)
                 if (isset($seenNames[$name])) {
                     continue;
                 }
@@ -45,6 +67,7 @@ class SiteScanner
                     'path' => $directory,
                     'php_version' => $phpVersion,
                     'has_custom_php' => $phpVersion !== $defaultPhp,
+                    'secure' => true,
                 ];
             }
         }

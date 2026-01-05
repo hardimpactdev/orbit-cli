@@ -127,3 +127,58 @@ it('skips invalid directories', function () {
 
     expect($sites)->toBeEmpty();
 });
+
+it('respects custom path overrides from config', function () {
+    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $nestedDir = $tempDir.'/parent/nested/myproject';
+    mkdir($nestedDir, 0755, true);
+    mkdir($tempDir.'/myproject', 0755, true); // Regular project with same name
+
+    $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
+    $this->configManager->shouldReceive('getTld')->andReturn('test');
+    $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
+    $this->configManager->shouldReceive('getSiteOverrides')->andReturn([
+        'myproject' => ['path' => $nestedDir],
+    ]);
+
+    $scanner = new SiteScanner($this->configManager);
+    $sites = $scanner->scan();
+
+    // Should find myproject pointing to nested path (custom takes precedence)
+    $myprojectSite = collect($sites)->firstWhere('name', 'myproject');
+    expect($myprojectSite)->not->toBeNull();
+    expect($myprojectSite['path'])->toBe($nestedDir);
+
+    // Cleanup
+    rmdir($tempDir.'/myproject');
+    rmdir($nestedDir);
+    rmdir($tempDir.'/parent/nested');
+    rmdir($tempDir.'/parent');
+    rmdir($tempDir);
+});
+
+it('includes custom path sites even if not in scanned paths', function () {
+    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $customDir = sys_get_temp_dir().'/launchpad-custom-'.uniqid();
+    mkdir($tempDir, 0755, true);
+    mkdir($customDir, 0755, true);
+
+    $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
+    $this->configManager->shouldReceive('getTld')->andReturn('test');
+    $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
+    $this->configManager->shouldReceive('getSiteOverrides')->andReturn([
+        'customsite' => ['path' => $customDir],
+    ]);
+
+    $scanner = new SiteScanner($this->configManager);
+    $sites = $scanner->scan();
+
+    expect($sites)->toHaveCount(1);
+    expect($sites[0]['name'])->toBe('customsite');
+    expect($sites[0]['path'])->toBe($customDir);
+    expect($sites[0]['domain'])->toBe('customsite.test');
+
+    // Cleanup
+    rmdir($customDir);
+    rmdir($tempDir);
+});
