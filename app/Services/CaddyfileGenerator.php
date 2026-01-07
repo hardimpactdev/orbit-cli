@@ -65,7 +65,6 @@ class CaddyfileGenerator
 ";
         }
 
-
         // Add Reverb WebSocket service if enabled
         if ($this->configManager->isServiceEnabled('reverb')) {
             $tld = $this->configManager->get('tld') ?: 'test';

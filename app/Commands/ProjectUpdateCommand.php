@@ -70,7 +70,7 @@ final class ProjectUpdateCommand extends Command
             // Step 1: Git pull
             $this->info('Pulling latest changes...');
             $gitResult = Process::path($path)->timeout(120)->run('git pull');
-            
+
             $results['steps']['git_pull'] = [
                 'success' => $gitResult->successful(),
                 'output' => trim($gitResult->output()),
@@ -78,6 +78,7 @@ final class ProjectUpdateCommand extends Command
 
             if (! $gitResult->successful()) {
                 $results['steps']['git_pull']['error'] = $gitResult->errorOutput();
+
                 return $this->outputResult($results, false, 'Git pull failed');
             }
 
@@ -85,7 +86,7 @@ final class ProjectUpdateCommand extends Command
             if (! $this->option('no-deps') && file_exists("{$path}/composer.json")) {
                 $this->info('Installing Composer dependencies...');
                 $composerResult = Process::path($path)->timeout(300)->run('composer install --no-interaction');
-                
+
                 $results['steps']['composer'] = [
                     'success' => $composerResult->successful(),
                 ];
@@ -99,7 +100,7 @@ final class ProjectUpdateCommand extends Command
             if (! $this->option('no-deps') && file_exists("{$path}/package.json")) {
                 $this->info('Installing NPM dependencies...');
                 $npmResult = Process::path($path)->timeout(300)->run('npm install');
-                
+
                 $results['steps']['npm'] = [
                     'success' => $npmResult->successful(),
                 ];
@@ -113,7 +114,7 @@ final class ProjectUpdateCommand extends Command
             if (! $this->option('no-migrate') && file_exists("{$path}/artisan")) {
                 $this->info('Running migrations...');
                 $migrateResult = Process::path($path)->timeout(120)->run('php artisan migrate --force');
-                
+
                 $results['steps']['migrate'] = [
                     'success' => $migrateResult->successful(),
                 ];
@@ -129,7 +130,7 @@ final class ProjectUpdateCommand extends Command
                 if (isset($packageJson['scripts']['build'])) {
                     $this->info('Building assets...');
                     $buildResult = Process::path($path)->timeout(300)->run('npm run build');
-                    
+
                     $results['steps']['build'] = [
                         'success' => $buildResult->successful(),
                     ];
@@ -168,7 +169,7 @@ final class ProjectUpdateCommand extends Command
     private function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'] . substr($path, 1);
+            return $_SERVER['HOME'].substr($path, 1);
         }
 
         return $path;

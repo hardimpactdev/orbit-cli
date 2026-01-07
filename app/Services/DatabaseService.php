@@ -18,7 +18,8 @@ class DatabaseService
 
     protected function getDbPath(): string
     {
-        $home = $_SERVER["HOME"] ?? getenv("HOME") ?? "/tmp";
+        $home = $_SERVER['HOME'] ?? getenv('HOME') ?? '/tmp';
+
         return "{$home}/.config/launchpad/database.sqlite";
     }
 
@@ -26,7 +27,7 @@ class DatabaseService
     {
         try {
             $configDir = dirname($this->dbPath);
-            
+
             if (! is_dir($configDir)) {
                 @mkdir($configDir, 0755, true);
             }
@@ -37,8 +38,8 @@ class DatabaseService
 
             $this->db = new PDO("sqlite:{$this->dbPath}");
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            $this->db->exec("
+
+            $this->db->exec('
                 CREATE TABLE IF NOT EXISTS projects (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     slug VARCHAR(255) NOT NULL UNIQUE,
@@ -47,8 +48,8 @@ class DatabaseService
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            ");
-            $this->db->exec("CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug)");
+            ');
+            $this->db->exec('CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug)');
         } catch (\Exception) {
             // If database initialization fails, we continue without it
             $this->db = null;
@@ -60,8 +61,8 @@ class DatabaseService
         if ($this->db === null) {
             return null;
         }
-        
-        $stmt = $this->db->prepare("SELECT * FROM projects WHERE slug = ?");
+
+        $stmt = $this->db->prepare('SELECT * FROM projects WHERE slug = ?');
         $stmt->execute([$slug]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -73,16 +74,16 @@ class DatabaseService
         if ($this->db === null) {
             return;
         }
-        
-        $now = date("Y-m-d H:i:s");
-        $stmt = $this->db->prepare("
+
+        $now = date('Y-m-d H:i:s');
+        $stmt = $this->db->prepare('
             INSERT INTO projects (slug, path, php_version, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(slug) DO UPDATE SET
                 path = excluded.path,
                 php_version = excluded.php_version,
                 updated_at = excluded.updated_at
-        ");
+        ');
         $stmt->execute([$slug, $path, $version, $now, $now]);
     }
 
@@ -91,8 +92,8 @@ class DatabaseService
         if ($this->db === null) {
             return;
         }
-        
-        $stmt = $this->db->prepare("DELETE FROM projects WHERE slug = ?");
+
+        $stmt = $this->db->prepare('DELETE FROM projects WHERE slug = ?');
         $stmt->execute([$slug]);
     }
 
@@ -101,8 +102,8 @@ class DatabaseService
         if ($this->db === null) {
             return [];
         }
-        
-        $stmt = $this->db->query("SELECT * FROM projects WHERE php_version IS NOT NULL");
+
+        $stmt = $this->db->query('SELECT * FROM projects WHERE php_version IS NOT NULL');
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -111,6 +112,6 @@ class DatabaseService
     {
         $override = $this->getProjectOverride($slug);
 
-        return $override["php_version"] ?? null;
+        return $override['php_version'] ?? null;
     }
 }

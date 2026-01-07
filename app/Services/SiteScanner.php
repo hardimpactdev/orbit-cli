@@ -31,7 +31,7 @@ class SiteScanner
 
                 if (File::isDirectory($customPath)) {
                     $seenNames[$name] = true;
-                    $hasPublicFolder = File::isDirectory($customPath . '/public');
+                    $hasPublicFolder = File::isDirectory($customPath.'/public');
                     $phpVersion = $this->detectPhpVersion($customPath, $name, $defaultPhp);
 
                     $project = [
@@ -74,7 +74,7 @@ class SiteScanner
 
                 $seenNames[$name] = true;
 
-                $hasPublicFolder = File::isDirectory($directory . '/public');
+                $hasPublicFolder = File::isDirectory($directory.'/public');
                 $phpVersion = $this->detectPhpVersion($directory, $name, $defaultPhp);
 
                 $project = [
@@ -112,7 +112,7 @@ class SiteScanner
     protected function detectPhpVersion(string $directory, string $name, string $default): string
     {
         // Check for .php-version file first
-        $phpVersionFile = $directory . '/.php-version';
+        $phpVersionFile = $directory.'/.php-version';
         if (File::exists($phpVersionFile)) {
             $version = trim(File::get($phpVersionFile));
             if ($this->isValidPhpVersion($version)) {
@@ -143,7 +143,7 @@ class SiteScanner
     protected function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'] . substr($path, 1);
+            return $_SERVER['HOME'].substr($path, 1);
         }
 
         return $path;

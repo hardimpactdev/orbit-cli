@@ -10,13 +10,14 @@ use RuntimeException;
 final class McpClient
 {
     private readonly string $baseUrl;
+
     private ?string $resolveHost = null;
 
     public function __construct(ConfigManager $config)
     {
         // CLI always calls localhost Orchestrator
         $orchestratorUrl = $config->get('orchestrator.url', 'http://localhost:8000');
-        $this->baseUrl = rtrim((string) $orchestratorUrl, '/') . '/mcp';
+        $this->baseUrl = rtrim((string) $orchestratorUrl, '/').'/mcp';
 
         // Check if URL uses .ccc TLD - resolve to localhost for background processes
         $parsedUrl = parse_url($this->baseUrl);
@@ -66,7 +67,7 @@ final class McpClient
 
         if (! $response->successful()) {
             throw new RuntimeException(
-                'MCP call failed: ' . ($response->json('error.message') ?? $response->body())
+                'MCP call failed: '.($response->json('error.message') ?? $response->body())
             );
         }
 
@@ -76,7 +77,7 @@ final class McpClient
         if (isset($result['error'])) {
             /** @var array{message?: string} $error */
             $error = $result['error'];
-            throw new RuntimeException('MCP error: ' . ($error['message'] ?? 'Unknown error'));
+            throw new RuntimeException('MCP error: '.($error['message'] ?? 'Unknown error'));
         }
 
         $mcpResult = $result['result'] ?? [];

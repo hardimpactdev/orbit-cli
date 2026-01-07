@@ -43,7 +43,7 @@ final class SetupCommand extends Command
         $steps['env'] = $envResult;
 
         if (! $envResult['success']) {
-            return $this->failWithMessage('Failed to configure .env: ' . ($envResult['error'] ?? 'Unknown error'));
+            return $this->failWithMessage('Failed to configure .env: '.($envResult['error'] ?? 'Unknown error'));
         }
 
         // Step 2: Create database
@@ -128,18 +128,20 @@ final class SetupCommand extends Command
     private function setEnvValue(string $content, string $key, string $value, array &$changes): string
     {
         $pattern = "/^{$key}=.*/m";
-        
+
         if (preg_match($pattern, $content)) {
             $newContent = preg_replace($pattern, "{$key}={$value}", $content);
             if ($newContent !== $content) {
                 $changes[$key] = $value;
             }
+
             return $newContent ?? $content;
         }
-        
+
         // Key doesn't exist, append it
         $changes[$key] = $value;
-        return $content . "\n{$key}={$value}";
+
+        return $content."\n{$key}={$value}";
     }
 
     private function createDatabase(string $database): array
@@ -152,17 +154,20 @@ final class SetupCommand extends Command
         );
 
         $output = $result->output();
-        
+
         if ($result->successful() || str_contains($output, 'already exists')) {
             if (str_contains($output, 'already exists')) {
                 $this->line('  Database already exists');
+
                 return ['success' => true, 'message' => 'already exists'];
             }
             $this->line('  Database created successfully');
+
             return ['success' => true, 'message' => 'created'];
         }
 
         $this->warn("  Database creation failed: {$output}");
+
         return ['success' => false, 'error' => $output];
     }
 
@@ -185,16 +190,18 @@ final class SetupCommand extends Command
 
             if ($result->successful()) {
                 $this->line('  Composer setup completed');
+
                 return ['success' => true, 'method' => 'composer-setup'];
             } else {
-                $this->warn('  Composer setup had issues: ' . $result->output());
+                $this->warn('  Composer setup had issues: '.$result->output());
+
                 return ['success' => false, 'error' => $result->output(), 'method' => 'composer-setup'];
             }
         }
 
         // Fallback: run individual commands
         $this->line('  No composer setup script found, running individual steps...');
-        
+
         // Composer install
         $this->line('  Running composer install...');
         Process::path($projectPath)->timeout(600)->run('composer install');
@@ -231,16 +238,16 @@ final class SetupCommand extends Command
 
         // If it starts with ~
         if (str_starts_with($project, '~/')) {
-            return $_SERVER['HOME'] . substr($project, 1);
+            return $_SERVER['HOME'].substr($project, 1);
         }
 
         // Otherwise, look in configured paths
         $paths = $config->get('paths', []);
         foreach ($paths as $basePath) {
-            $expandedBase = str_starts_with((string) $basePath, '~/') 
-                ? $_SERVER['HOME'] . substr((string) $basePath, 1) 
+            $expandedBase = str_starts_with((string) $basePath, '~/')
+                ? $_SERVER['HOME'].substr((string) $basePath, 1)
                 : $basePath;
-            
+
             $fullPath = "{$expandedBase}/{$project}";
             if (is_dir($fullPath)) {
                 return $fullPath;
@@ -249,8 +256,8 @@ final class SetupCommand extends Command
 
         // Default to first path
         $defaultPath = $paths[0] ?? '~/projects';
-        $expandedDefault = str_starts_with((string) $defaultPath, '~/') 
-            ? $_SERVER['HOME'] . substr((string) $defaultPath, 1) 
+        $expandedDefault = str_starts_with((string) $defaultPath, '~/')
+            ? $_SERVER['HOME'].substr((string) $defaultPath, 1)
             : $defaultPath;
 
         return "{$expandedDefault}/{$project}";

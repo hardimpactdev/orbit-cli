@@ -43,7 +43,7 @@ final class ReverbSetupCommand extends Command
 
         // Create config directory
         $reverbConfigPath = $config->getConfigPath().'/reverb';
-        if (!File::isDirectory($reverbConfigPath)) {
+        if (! File::isDirectory($reverbConfigPath)) {
             File::makeDirectory($reverbConfigPath, 0755, true);
             $this->line('  Created config directory');
         }
@@ -59,7 +59,7 @@ final class ReverbSetupCommand extends Command
         $appId = $this->option('app-id') ?: $config->get('reverb.app_id', 'launchpad');
         $appKey = $this->option('app-key') ?: $config->get('reverb.app_key', 'launchpad-key');
         $appSecret = $this->option('app-secret') ?: $config->get('reverb.app_secret', 'launchpad-secret');
-        
+
         $envContent = <<<ENV
 REVERB_APP_ID={$appId}
 REVERB_APP_KEY={$appKey}
@@ -81,7 +81,7 @@ ENV;
             'port' => 443,
         ]);
         $config->set('reverb.url', "https://reverb.{$tld}");
-        
+
         // Enable the service
         $config->enableService('reverb');
         $this->line('  Enabled service in configuration');
@@ -93,15 +93,16 @@ ENV;
         if ($this->option('enable')) {
             $this->line('');
             $this->info('Building Reverb container...');
-            
+
             // Build the Docker image
             $buildResult = Process::path($reverbConfigPath)
                 ->timeout(300)
                 ->run('docker compose build');
-            
-            if (!$buildResult->successful()) {
+
+            if (! $buildResult->successful()) {
                 $this->error('Failed to build Reverb container:');
                 $this->line($buildResult->errorOutput());
+
                 return 1;
             }
             $this->line('  Docker image built');
@@ -131,7 +132,7 @@ ENV;
         $this->line('  REVERB_PORT=443');
         $this->line('  REVERB_SCHEME=https');
 
-        if (!$this->option('enable')) {
+        if (! $this->option('enable')) {
             $this->line('');
             $this->line('Run <comment>launchpad start</comment> to start all services including Reverb.');
         }

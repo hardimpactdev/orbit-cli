@@ -26,12 +26,12 @@ it('scans directories and returns all projects', function () {
     $projects = $scanner->scan();
 
     expect($projects)->toHaveCount(3);
-    
+
     // project1 has public folder
     $project1 = collect($projects)->firstWhere('name', 'project1');
     expect($project1['has_public_folder'])->toBeTrue();
     expect($project1['domain'])->toBe('project1.test');
-    
+
     // project3 has no public folder
     $project3 = collect($projects)->firstWhere('name', 'project3');
     expect($project3['has_public_folder'])->toBeFalse();
@@ -104,7 +104,7 @@ it('respects database php version override', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
-    
+
     $this->databaseService->shouldReceive('getPhpVersion')->with('myproject')->andReturn('8.4');
 
     $scanner = new SiteScanner($this->configManager, $this->databaseService);

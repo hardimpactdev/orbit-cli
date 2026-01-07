@@ -64,7 +64,7 @@ final class ProjectListCommand extends Command
         $this->newLine();
         $this->line("TLD: {$tld}");
         $this->line("Default PHP: {$defaultPhp}");
-        $this->line("Total: " . count($projects) . " projects");
+        $this->line('Total: '.count($projects).' projects');
 
         return self::SUCCESS;
     }

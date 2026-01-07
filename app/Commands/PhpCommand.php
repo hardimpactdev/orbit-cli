@@ -53,7 +53,7 @@ class PhpCommand extends Command
             $databaseService->removeProjectOverride($site);
             // Also remove from config (legacy cleanup)
             $configManager->removeSiteOverride($site);
-            
+
             $newVersion = $configManager->getDefaultPhpVersion();
 
             // Only regenerate Caddyfile if site has public folder
@@ -101,7 +101,7 @@ class PhpCommand extends Command
 
         // Save to database (new way)
         $databaseService->setProjectPhpVersion($site, $siteInfo['path'], $version);
-        
+
         // Only regenerate Caddyfile if site has public folder
         $reloaded = false;
         if ($siteInfo['has_public_folder']) {

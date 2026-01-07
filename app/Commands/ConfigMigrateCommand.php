@@ -41,13 +41,13 @@ final class ConfigMigrateCommand extends Command
         foreach ($siteOverrides as $slug => $override) {
             if (isset($override['php_version'])) {
                 // Try to find the project path
-                $path = $override['path' ] ?? $this->findProjectPath($slug, $paths);
-                
+                $path = $override['path'] ?? $this->findProjectPath($slug, $paths);
+
                 if ($path) {
                     try {
                         $databaseService->setProjectPhpVersion($slug, $path, $override['php_version']);
                         $migrated++;
-                        
+
                         if (! $this->wantsJson()) {
                             $this->info("Migrated: {$slug} -> PHP {$override['php_version']}");
                         }
@@ -63,7 +63,7 @@ final class ConfigMigrateCommand extends Command
         // Clear sites from config.json after migration
         if ($migrated > 0) {
             $configManager->set('sites', []);
-            
+
             if (! $this->wantsJson()) {
                 $this->info('Cleared sites from config.json');
             }
@@ -95,7 +95,7 @@ final class ConfigMigrateCommand extends Command
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
             $projectPath = "{$expandedPath}/{$slug}";
-            
+
             if (File::isDirectory($projectPath)) {
                 return $projectPath;
             }
@@ -107,7 +107,7 @@ final class ConfigMigrateCommand extends Command
     private function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'] . substr($path, 1);
+            return $_SERVER['HOME'].substr($path, 1);
         }
 
         return $path;

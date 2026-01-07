@@ -50,7 +50,7 @@ final class ProjectCreateCommand extends Command
         }
 
         // Step 1: Create directory
-        if (!mkdir($localPath, 0755, true)) {
+        if (! mkdir($localPath, 0755, true)) {
             return $this->failWithMessage("Failed to create directory: {$localPath}");
         }
 
@@ -71,18 +71,18 @@ final class ProjectCreateCommand extends Command
 
         // Step 2: Build provision command (use full path for nohup)
         $launchpadBin = realpath($_SERVER['argv'][0]) ?: '/home/launchpad/projects/launchpad-cli/launchpad';
-        $provisionCmd = "HOME={$_SERVER['HOME']} {$launchpadBin} provision " . escapeshellarg($slug);
+        $provisionCmd = "HOME={$_SERVER['HOME']} {$launchpadBin} provision ".escapeshellarg($slug);
 
         if ($githubRepo) {
-            $provisionCmd .= " --github-repo=" . escapeshellarg($githubRepo);
+            $provisionCmd .= ' --github-repo='.escapeshellarg($githubRepo);
         }
         if ($template) {
-            $provisionCmd .= " --template=" . escapeshellarg($template);
+            $provisionCmd .= ' --template='.escapeshellarg($template);
         }
         if ($cloneUrl) {
-            $provisionCmd .= " --clone-url=" . escapeshellarg($cloneUrl);
+            $provisionCmd .= ' --clone-url='.escapeshellarg($cloneUrl);
         }
-        $provisionCmd .= " --visibility=" . escapeshellarg($visibility);
+        $provisionCmd .= ' --visibility='.escapeshellarg($visibility);
 
         // Step 3: Start background process (fully detached from SSH session)
         $logFile = "/tmp/provision-{$slug}.log";
@@ -99,12 +99,12 @@ final class ProjectCreateCommand extends Command
         exec("echo '{$launcherScript}' | at now 2>/dev/null || nohup {$launcherScript} > /dev/null 2>&1 &");
 
         // Only show info messages if not JSON mode
-        if (!$this->wantsJson()) {
+        if (! $this->wantsJson()) {
             $this->info("Project creation started: {$name}");
             $this->info("  Directory: {$localPath}");
             $this->info("  Log file: {$logFile}");
-            $this->info("");
-            $this->info("Provisioning in background. Monitor with:");
+            $this->info('');
+            $this->info('Provisioning in background. Monitor with:');
             $this->info("  tail -f {$logFile}");
         }
 
@@ -122,8 +122,9 @@ final class ProjectCreateCommand extends Command
     private function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'] . substr($path, 1);
+            return $_SERVER['HOME'].substr($path, 1);
         }
+
         return $path;
     }
 
@@ -134,6 +135,7 @@ final class ProjectCreateCommand extends Command
         } else {
             $this->error($message);
         }
+
         return ExitCode::GeneralError->value;
     }
 

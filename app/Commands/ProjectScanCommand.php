@@ -54,7 +54,7 @@ final class ProjectScanCommand extends Command
         }
 
         // Sort by name
-        usort($projects, fn($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
+        usort($projects, fn ($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
 
         if ($this->wantsJson()) {
             $this->outputJsonSuccess([
@@ -65,9 +65,9 @@ final class ProjectScanCommand extends Command
             if (empty($projects)) {
                 $this->info('No projects found.');
             } else {
-                $this->info('Found ' . count($projects) . ' project(s):');
+                $this->info('Found '.count($projects).' project(s):');
                 $this->newLine();
-                
+
                 foreach ($projects as $project) {
                     $this->line("  <info>{$project['name']}</info>");
                     $this->line("    Path: {$project['path']}");
@@ -112,6 +112,7 @@ final class ProjectScanCommand extends Command
                 if ($project) {
                     $projects[] = $project;
                 }
+
                 // Don't recurse into git repos
                 continue;
             }
@@ -164,12 +165,12 @@ final class ProjectScanCommand extends Command
 
         // Convert SSH URL to HTTPS
         if (preg_match('/^git@github\.com:(.+)\.git$/', $remoteUrl, $matches)) {
-            return 'https://github.com/' . $matches[1];
+            return 'https://github.com/'.$matches[1];
         }
 
         // Clean up HTTPS URL
         if (preg_match('/^https:\/\/github\.com\/(.+?)(\.git)?$/', $remoteUrl, $matches)) {
-            return 'https://github.com/' . rtrim($matches[1], '.git');
+            return 'https://github.com/'.rtrim($matches[1], '.git');
         }
 
         return null;
@@ -178,7 +179,7 @@ final class ProjectScanCommand extends Command
     private function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'] . substr($path, 1);
+            return $_SERVER['HOME'].substr($path, 1);
         }
 
         return $path;

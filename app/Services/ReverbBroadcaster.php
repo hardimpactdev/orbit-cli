@@ -9,6 +9,7 @@ use Pusher\Pusher;
 final class ReverbBroadcaster
 {
     private ?Pusher $pusher = null;
+
     private readonly bool $enabled;
 
     public function __construct(ConfigManager $config)
@@ -39,19 +40,19 @@ final class ReverbBroadcaster
      * Broadcast an event to a channel via Reverb's Pusher-compatible API.
      *
      * @param  string  $channel  Channel name (e.g., 'provisioning', 'project.my-app')
-     * @param  string  $event    Event name (e.g., 'project.provision.status')
+     * @param  string  $event  Event name (e.g., 'project.provision.status')
      * @param  array<string, mixed>  $data  Event payload
      */
     public function broadcast(string $channel, string $event, array $data): void
     {
-        if (!$this->enabled || !$this->pusher) {
+        if (! $this->enabled || ! $this->pusher) {
             return;
         }
 
         try {
             $this->pusher->trigger($channel, $event, $data);
         } catch (\Throwable $e) {
-            error_log("Reverb broadcast failed: " . $e->getMessage());
+            error_log('Reverb broadcast failed: '.$e->getMessage());
         }
     }
 
