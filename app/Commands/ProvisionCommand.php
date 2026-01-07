@@ -18,7 +18,11 @@ final class ProvisionCommand extends Command
         {--github-repo= : GitHub repo to create (user/repo format)}
         {--clone-url= : Existing repo URL to clone}
         {--template= : Template repository (user/repo format)}
-        {--visibility=private : Repository visibility (private/public)}';
+        {--visibility=private : Repository visibility (private/public)}
+        {--db-driver= : Database driver (sqlite, pgsql)}
+        {--session-driver= : Session driver (file, database, redis)}
+        {--cache-driver= : Cache driver (file, database, redis)}
+        {--queue-driver= : Queue driver (sync, database, redis)}';
 
     protected $description = 'Provision a project (create repo, clone, setup, register with orchestrator)';
 
@@ -195,28 +199,64 @@ final class ProvisionCommand extends Command
     {
         $this->info('Running project setup...');
 
-        // Composer install
+        // Step 1: Composer install WITHOUT running scripts
+        // This prevents setup scripts from running before .env is configured
         if (file_exists("{$this->projectPath}/composer.json")) {
-            $this->info('  Installing Composer dependencies...');
-            Process::path($this->projectPath)->timeout(600)->run('composer install --no-interaction');
+            $this->info('  Installing Composer dependencies (no scripts)...');
+            Process::path($this->projectPath)->timeout(600)->run('composer install --no-interaction --no-scripts');
         }
 
-        // NPM install
+        // Step 2: Install JS dependencies (detect package manager from lockfile)
         if (file_exists("{$this->projectPath}/package.json")) {
-            $this->info('  Installing NPM dependencies...');
-            Process::path($this->projectPath)->timeout(600)->run('npm install');
+            $home = $_SERVER['HOME'];
+            if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
+                $this->info('  Installing dependencies with Bun...');
+                $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
+                Process::path($this->projectPath)->timeout(600)->run("{$bunPath} install");
+            } elseif (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
+                $this->info('  Installing dependencies with pnpm...');
+                Process::path($this->projectPath)->timeout(600)->run('pnpm install');
+            } elseif (file_exists("{$this->projectPath}/yarn.lock")) {
+                $this->info('  Installing dependencies with Yarn...');
+                Process::path($this->projectPath)->timeout(600)->run('yarn install');
+            } else {
+                $this->info('  Installing dependencies with npm...');
+                Process::path($this->projectPath)->timeout(600)->run('npm install');
+            }
         }
 
-        // Copy .env and configure
+        // Step 3: Copy .env and configure BEFORE running any Laravel commands
         if (file_exists("{$this->projectPath}/.env.example") && ! file_exists("{$this->projectPath}/.env")) {
             copy("{$this->projectPath}/.env.example", "{$this->projectPath}/.env");
+        }
 
-            // Configure common settings
-            $this->configureEnv();
+        // Step 4: Configure .env with user's driver choices
+        $this->configureEnv();
 
-            // Generate Laravel key
-            if (file_exists("{$this->projectPath}/artisan")) {
-                Process::path($this->projectPath)->run('php artisan key:generate');
+        // Step 5: Create PostgreSQL database if needed
+        if ($this->option('db-driver') === 'pgsql') {
+            $this->createPostgresDatabase();
+        }
+
+        // Step 6: Generate Laravel key
+        if (file_exists("{$this->projectPath}/artisan")) {
+            $this->info('  Generating application key...');
+            Process::path($this->projectPath)->run('php artisan key:generate');
+        }
+
+        // Step 7: Run migrations
+        if (file_exists("{$this->projectPath}/artisan")) {
+            $this->info('  Running migrations...');
+            Process::path($this->projectPath)->timeout(120)->run('php artisan migrate --force');
+        }
+
+        // Step 8: Run composer scripts (like post-install-cmd) if they exist
+        // This handles templates that have setup scripts
+        if (file_exists("{$this->projectPath}/composer.json")) {
+            $composerJson = json_decode(file_get_contents("{$this->projectPath}/composer.json"), true);
+            if (isset($composerJson['scripts']['post-autoload-dump']) || isset($composerJson['scripts']['post-install-cmd'])) {
+                $this->info('  Running post-install scripts...');
+                Process::path($this->projectPath)->timeout(300)->run('composer run-script post-autoload-dump 2>/dev/null || true');
             }
         }
 
@@ -239,23 +279,114 @@ final class ProvisionCommand extends Command
         // Configure APP_URL with the project domain
         $env = preg_replace('/^APP_URL=.*/m', "APP_URL=https://{$this->slug}.ccc", $env);
 
-        // Configure Redis (available at localhost:6379)
-        $env = preg_replace('/^REDIS_HOST=.*/m', 'REDIS_HOST=127.0.0.1', (string) $env);
-        $env = preg_replace('/^REDIS_PORT=.*/m', 'REDIS_PORT=6379', (string) $env);
+        // Get driver options (null = keep template default)
+        $dbDriver = $this->option('db-driver');
+        $sessionDriver = $this->option('session-driver');
+        $cacheDriver = $this->option('cache-driver');
+        $queueDriver = $this->option('queue-driver');
 
-        // Configure database
-        $env = preg_replace('/^DB_CONNECTION=.*/m', 'DB_CONNECTION=sqlite', (string) $env);
-        $env = preg_replace('/^DB_DATABASE=.*/m', 'DB_DATABASE='.$this->projectPath.'/database/database.sqlite', (string) $env);
+        // Database configuration
+        if ($dbDriver === 'pgsql') {
+            $env = $this->setEnvValue($env, 'DB_CONNECTION', 'pgsql');
+            $env = $this->setEnvValue($env, 'DB_HOST', 'launchpad-postgres');
+            $env = $this->setEnvValue($env, 'DB_PORT', '5432');
+            $env = $this->setEnvValue($env, 'DB_DATABASE', $this->slug);
+            $env = $this->setEnvValue($env, 'DB_USERNAME', 'launchpad');
+            $env = $this->setEnvValue($env, 'DB_PASSWORD', 'launchpad');
+        } elseif ($dbDriver === 'sqlite') {
+            $env = $this->setEnvValue($env, 'DB_CONNECTION', 'sqlite');
+            // Create SQLite database file
+            $sqlitePath = "{$this->projectPath}/database/database.sqlite";
+            if (! file_exists($sqlitePath)) {
+                if (! is_dir(dirname($sqlitePath))) {
+                    mkdir(dirname($sqlitePath), 0755, true);
+                }
+                touch($sqlitePath);
+            }
+        }
+        // If null, keep template default
 
-        // Note: Cache/session/queue settings are inherited from .env.example
-        // The starterkit defaults to file/sync which works without Redis
+        // Session driver
+        if ($sessionDriver) {
+            $env = $this->setEnvValue($env, 'SESSION_DRIVER', $sessionDriver);
+        }
+
+        // Cache driver
+        if ($cacheDriver) {
+            $env = $this->setEnvValue($env, 'CACHE_STORE', $cacheDriver);
+        }
+
+        // Queue driver
+        if ($queueDriver) {
+            $env = $this->setEnvValue($env, 'QUEUE_CONNECTION', $queueDriver);
+        }
+
+        // Configure Redis host if any driver uses Redis
+        $needsRedis = in_array('redis', [$sessionDriver, $cacheDriver, $queueDriver], true);
+        if ($needsRedis) {
+            $env = $this->setEnvValue($env, 'REDIS_HOST', 'launchpad-redis');
+            $env = $this->setEnvValue($env, 'REDIS_PORT', '6379');
+        }
 
         file_put_contents($envPath, $env);
+        $this->info('  Environment configured');
+    }
 
-        // Create SQLite database if using SQLite
-        $dbPath = "{$this->projectPath}/database/database.sqlite";
-        if (! file_exists($dbPath)) {
-            touch($dbPath);
+    /**
+     * Set or update an environment variable in .env content.
+     */
+    private function setEnvValue(string $env, string $key, string $value): string
+    {
+        // Escape value if it contains spaces or special characters
+        if (preg_match('/[\s#]/', $value)) {
+            $value = '"'.$value.'"';
+        }
+
+        // Check if key exists
+        if (preg_match("/^{$key}=.*/m", $env)) {
+            // Update existing key
+            return preg_replace("/^{$key}=.*/m", "{$key}={$value}", $env);
+        }
+
+        // Add new key at end
+        return rtrim($env)."\n{$key}={$value}\n";
+    }
+
+    /**
+     * Create PostgreSQL database for the project.
+     */
+    private function createPostgresDatabase(): void
+    {
+        $this->info("  Creating PostgreSQL database: {$this->slug}");
+
+        // Check if PostgreSQL container is running
+        $containerCheck = Process::run("docker ps --filter name=launchpad-postgres --format '{{.Names}}' 2>&1");
+        if (! str_contains($containerCheck->output(), 'launchpad-postgres')) {
+            $this->warn('  PostgreSQL container not running, skipping database creation');
+
+            return;
+        }
+
+        // Check if database already exists
+        $checkResult = Process::run(
+            "docker exec launchpad-postgres psql -U launchpad -tAc \"SELECT 1 FROM pg_database WHERE datname='{$this->slug}'\" 2>&1"
+        );
+
+        if (str_contains($checkResult->output(), '1')) {
+            $this->info('  Database already exists');
+
+            return;
+        }
+
+        // Create database
+        $result = Process::run(
+            "docker exec launchpad-postgres psql -U launchpad -c \"CREATE DATABASE \\\"{$this->slug}\\\";\" 2>&1"
+        );
+
+        if ($result->successful()) {
+            $this->info('  PostgreSQL database created');
+        } else {
+            $this->warn('  Failed to create database: '.$result->output());
         }
     }
 

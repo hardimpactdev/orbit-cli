@@ -65,7 +65,13 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad worktree:refresh` | Auto-detect and link new worktrees |
 | `launchpad worktree:unlink <site> <wt>` | Remove worktree routing |
 | `launchpad project:create <name>` | Create project with async provisioning |
+| `launchpad project:list` | List all projects in scan paths |
+| `launchpad project:scan` | Scan for git repositories |
+| `launchpad project:update [path]` | Update project (git pull + deps) |
+| `launchpad project:delete <slug>` | Delete project with cascade |
 | `launchpad provision <slug>` | Background provisioning (internal) |
+| `launchpad provision:status <slug>` | Check provisioning status |
+| `launchpad reverb:setup` | Setup Reverb WebSocket service |
 
 ## Services & Ports
 

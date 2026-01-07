@@ -17,20 +17,29 @@ Launchpad sets up a complete local development environment with:
 ```
 app/
 ├── Commands/          # CLI commands (Laravel Zero)
-│   ├── InitCommand.php       # Initialize launchpad configuration
-│   ├── StartCommand.php      # Start all Docker services
-│   ├── StopCommand.php       # Stop all Docker services
-│   ├── RestartCommand.php    # Restart all services
-│   ├── StatusCommand.php     # Show service status
-│   ├── SitesCommand.php      # List registered sites
-│   ├── PhpCommand.php        # Set PHP version per site
-│   ├── LogsCommand.php       # View service logs
-│   ├── TrustCommand.php      # Trust the local CA certificate
+│   ├── InitCommand.php          # Initialize launchpad configuration
+│   ├── StartCommand.php         # Start all Docker services
+│   ├── StopCommand.php          # Stop all Docker services
+│   ├── RestartCommand.php       # Restart all services
+│   ├── StatusCommand.php        # Show service status
+│   ├── SitesCommand.php         # List registered sites
+│   ├── PhpCommand.php           # Set PHP version per site
+│   ├── LogsCommand.php          # View service logs
+│   ├── TrustCommand.php         # Trust the local CA certificate
 │   ├── UpgradeCommand.php       # Self-update to latest version
 │   ├── RebuildCommand.php       # Rebuild PHP images with extensions
 │   ├── WorktreesCommand.php     # List git worktrees with subdomains
-│   ├── WorktreeRefreshCommand.php # Refresh/auto-link worktrees
-│   └── WorktreeUnlinkCommand.php  # Unlink worktree from site
+│   ├── WorktreeRefreshCommand.php   # Refresh/auto-link worktrees
+│   ├── WorktreeUnlinkCommand.php    # Unlink worktree from site
+│   ├── ProjectCreateCommand.php     # Create project with provisioning
+│   ├── ProjectListCommand.php       # List all projects
+│   ├── ProjectScanCommand.php       # Scan for git repos in paths
+│   ├── ProjectUpdateCommand.php     # Update project (pull + deps)
+│   ├── ProjectDeleteCommand.php     # Delete project with cascade
+│   ├── ProvisionCommand.php         # Background provisioning
+│   ├── ProvisionStatusCommand.php   # Check provisioning status
+│   ├── ConfigMigrateCommand.php     # Migrate config to SQLite
+│   └── ReverbSetupCommand.php       # Setup Reverb WebSocket
 ├── Concerns/
 │   └── WithJsonOutput.php    # Trait for JSON output support
 ├── Enums/
@@ -43,7 +52,10 @@ app/
     ├── DockerManager.php        # Docker container operations
     ├── PhpComposeGenerator.php  # Generates PHP docker-compose
     ├── SiteScanner.php          # Scans paths for PHP projects
-    └── WorktreeService.php      # Git worktree management
+    ├── WorktreeService.php      # Git worktree management
+    ├── DatabaseService.php      # SQLite for PHP overrides
+    ├── McpClient.php            # MCP client for orchestrator
+    └── ReverbBroadcaster.php    # WebSocket broadcasting
 ```
 
 ## Commands
@@ -67,6 +79,13 @@ All commands support `--json` flag for machine-readable output.
 | `launchpad worktrees [site]` | List git worktrees with subdomains |
 | `launchpad worktree:refresh` | Refresh and auto-link new worktrees |
 | `launchpad worktree:unlink <site> <worktree>` | Unlink worktree from site |
+| `launchpad project:list` | List all directories in scan paths |
+| `launchpad project:scan` | Scan for git repos in configured paths |
+| `launchpad project:update [path]` | Update project (git pull + deps) |
+| `launchpad project:delete <slug>` | Delete project with cascade |
+| `launchpad provision:status <slug>` | Check provisioning status |
+| `launchpad config:migrate` | Migrate config.json to SQLite |
+| `launchpad reverb:setup` | Setup Reverb WebSocket service |
 
 ## JSON Output Format
 
@@ -209,6 +228,39 @@ User config is stored at `~/.config/launchpad/config.json`:
   "default_php_version": "8.3"
 }
 ```
+
+## Data Storage
+
+### SQLite Database
+
+PHP version overrides and project metadata are stored in SQLite at `~/.config/launchpad/database.sqlite`:
+
+```sql
+CREATE TABLE projects (
+    id INTEGER PRIMARY KEY,
+    slug VARCHAR(255) UNIQUE,
+    path VARCHAR(500),
+    php_version VARCHAR(10) NULL,
+    created_at DATETIME,
+    updated_at DATETIME
+)
+```
+
+Use `config:migrate` to migrate legacy `sites` overrides from config.json to SQLite.
+
+### MCP Integration
+
+The CLI communicates with the orchestrator via `McpClient` for project management operations. Configure the orchestrator URL in config.json:
+
+```json
+{
+  "orchestrator": {
+    "url": "http://localhost:8000"
+  }
+}
+```
+
+The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring background processes work without DNS access.
 
 ## Docker Containers
 

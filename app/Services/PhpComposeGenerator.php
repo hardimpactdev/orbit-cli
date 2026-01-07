@@ -20,12 +20,6 @@ class PhpComposeGenerator
         $worktreeMount = $this->generateWorktreeMount();
         $vibeKanbanMount = $this->generateVibeKanbanMount();
 
-        // Get current user's UID and GID to run container as same user
-        // This prevents files created by PHP from being owned by root
-        $uid = posix_getuid();
-        $gid = posix_getgid();
-        $userDirective = "    user: \"{$uid}:{$gid}\"\n";
-
         $compose = "services:
   php-83:
     build:
@@ -33,7 +27,7 @@ class PhpComposeGenerator
       dockerfile: Dockerfile.php83
     image: launchpad-php:8.3
     container_name: launchpad-php-83
-{$userDirective}    ports:
+    ports:
       - \"8083:8080\"
     volumes:
 {$volumeMounts}{$worktreeMount}{$vibeKanbanMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
@@ -48,7 +42,7 @@ class PhpComposeGenerator
       dockerfile: Dockerfile.php84
     image: launchpad-php:8.4
     container_name: launchpad-php-84
-{$userDirective}    ports:
+    ports:
       - \"8084:8080\"
     volumes:
 {$volumeMounts}{$worktreeMount}{$vibeKanbanMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
