@@ -5,14 +5,22 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
+    $this->tempDir = sys_get_temp_dir().'/launchpad-project-test-'.uniqid();
+    mkdir($this->tempDir, 0755, true);
+
     $this->configManager = Mockery::mock(ConfigManager::class)->makePartial();
-    $this->configManager->shouldReceive('getPaths')->andReturn(['/tmp/projects']);
+    $this->configManager->shouldReceive('getPaths')->andReturn([$this->tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
-    $this->configManager->shouldReceive('getConfigPath')->andReturn('/tmp/.config/launchpad');
+    $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir.'/.config/launchpad');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
     $this->configManager->shouldReceive('get')->with('orchestrator.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
+    $this->configManager->shouldReceive('get')->with('paths', ['~/projects'])->andReturn([$this->tempDir]);
     $this->app->instance(ConfigManager::class, $this->configManager);
+});
+
+afterEach(function () {
+    \Illuminate\Support\Facades\File::deleteDirectory($this->tempDir);
 });
 
 it('runs project:create command with repo argument', function () {
@@ -30,6 +38,6 @@ it('runs project:create command with repo argument', function () {
 
     // Just check that the command executes without crashing
     // Don't check the exit code since the test environment differs
-    $this->artisan('project:create', ['repo' => 'owner/test-project', '--json' => true]);
+    $this->artisan('project:create', ['name' => 'test-project', '--json' => true]);
     expect(true)->toBeTrue();
 });

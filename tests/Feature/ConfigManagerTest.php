@@ -7,11 +7,17 @@ beforeEach(function () {
     $this->tempDir = sys_get_temp_dir().'/launchpad-config-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
 
-    // Mock $_SERVER['HOME'] for tests
+    // Store original HOME and set test HOME (ConfigManager uses getenv)
+    $this->originalHome = getenv('HOME');
+    putenv("HOME={$this->tempDir}");
     $_SERVER['HOME'] = $this->tempDir;
 });
 
 afterEach(function () {
+    // Restore original HOME
+    putenv("HOME={$this->originalHome}");
+    $_SERVER['HOME'] = $this->originalHome;
+
     // Cleanup
     if (File::isDirectory($this->tempDir.'/.config/launchpad')) {
         File::deleteDirectory($this->tempDir.'/.config/launchpad');

@@ -14,6 +14,10 @@ beforeEach(function () {
     $this->siteScanner = Mockery::mock(SiteScanner::class);
 
     $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir);
+    $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
+    $this->configManager->shouldReceive('get')->andReturnUsing(function ($key, $default = null) {
+        return $default;
+    });
 });
 
 afterEach(function () {
