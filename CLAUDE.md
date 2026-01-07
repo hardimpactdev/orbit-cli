@@ -441,3 +441,68 @@ $broadcaster->broadcast('provisioning', 'project.provision.status', [
 ```
 
 The broadcaster connects to internal port 6001 (HTTP) to avoid TLS certificate issues when broadcasting from the same server.
+
+## Provisioning Optimizations
+
+### Early Caddy Reload
+
+The `provision` command reloads Caddy **immediately after cloning** (before composer/npm install):
+
+```php
+// Early Caddy reload: Makes URL accessible immediately and starts SSL cert generation
+// This happens in parallel with the rest of setup
+$this->info("Early Caddy reload (making {$this->slug}.ccc accessible)...");
+$caddyfileGenerator->generate();
+$caddyfileGenerator->reload();
+$caddyfileGenerator->reloadPhp();
+```
+
+**Benefits:**
+- URL becomes accessible immediately (returns 503 until setup completes)
+- SSL certificate generation starts during composer/npm install
+- ~2-3 second improvement in perceived provisioning time
+
+### Granular Status Broadcasts
+
+The provisioning broadcasts granular status updates:
+
+| Status | Description |
+|--------|-------------|
+| `provisioning` | Initial state |
+| `creating_repo` | Creating GitHub repository from template |
+| `cloning` | Cloning repository to ~/projects/{slug} |
+| `setting_up` | Early Caddy reload + initial env setup |
+| `installing_composer` | Running composer install |
+| `installing_npm` | Running bun install |
+| `building` | Running bun run build |
+| `finalizing` | Database migrations + orchestrator registration |
+| `ready` | Complete - project ready to use |
+| `failed` | Error occurred (includes error message) |
+
+### Timing Benchmarks (liftoff-starterkit)
+
+| Step | Time |
+|------|------|
+| GitHub repo + propagation | ~7s |
+| Git clone | ~2s |
+| Caddy early reload | ~1s |
+| Composer install | ~4s |
+| Bun install | ~1s |
+| Bun build | ~7s |
+| Env/Key/Migrate | ~1s |
+| Orchestrator registration | ~2s |
+| **Total** | **~22-25s** |
+
+## Testing Provisioning
+
+Use the test script on the remote server:
+
+```bash
+# Quick test with random project name
+ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh
+
+# Custom project name
+ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh my-test-project
+```
+
+See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-provision/SKILL.md`
