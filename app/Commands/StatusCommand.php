@@ -20,6 +20,7 @@ class StatusCommand extends Command
         'dns' => 'launchpad-dns',
         'php-83' => 'launchpad-php-83',
         'php-84' => 'launchpad-php-84',
+        'php-85' => 'launchpad-php-85',
         'caddy' => 'launchpad-caddy',
         'postgres' => 'launchpad-postgres',
         'redis' => 'launchpad-redis',
