@@ -5,7 +5,6 @@ namespace App\Commands;
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use LaravelZero\Framework\Commands\Command;
-use Phar;
 
 class UpgradeCommand extends Command
 {
@@ -22,7 +21,7 @@ class UpgradeCommand extends Command
     public function handle(): int
     {
         $currentVersion = config('app.version');
-        $pharPath = Phar::running(false);
+        $pharPath = \Phar::running(false);
 
         // Check if running as PHAR
         if (empty($pharPath) && ! $this->option('check')) {
@@ -208,13 +207,25 @@ class UpgradeCommand extends Command
 
     private function isValidPhar(string $path): bool
     {
-        try {
-            new Phar($path);
-
-            return true;
-        } catch (\Exception) {
+        // Read the first 1KB to check for phar signature
+        $content = @file_get_contents($path, false, null, 0, 1024);
+        if ($content === false) {
             return false;
         }
+
+        // Check for PHP shebang and phar indicators
+        if (! str_contains($content, '<?php')) {
+            return false;
+        }
+
+        // Check for __HALT_COMPILER which is required in all phars
+        // We need to check the full file for this
+        $fullContent = @file_get_contents($path);
+        if ($fullContent === false) {
+            return false;
+        }
+
+        return str_contains($fullContent, '__HALT_COMPILER()');
     }
 
     private function replaceCurrentBinary(string $currentPath, string $newPath): bool
