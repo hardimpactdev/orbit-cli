@@ -304,3 +304,88 @@ This CLI is designed to be controlled by the **launchpad-desktop** NativePHP app
 - **Remote execution:** `ssh user@host "cd ~/projects/launchpad && php launchpad status --json"`
 
 The `--json` flag ensures machine-readable output for programmatic control.
+
+
+## Project Provisioning
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `project:create` | Create a new project with async provisioning |
+| `provision` | Background command that provisions a project |
+
+### project:create
+
+Creates a new project placeholder and starts background provisioning:
+
+```bash
+launchpad project:create my-app \
+  --template=user/repo \
+  --visibility=private \
+  --json
+```
+
+**Options:**
+- `--template` - GitHub template repository (user/repo format)
+- `--clone-url` - Existing repo URL to clone (alternative to template)
+- `--visibility` - Repository visibility: private (default) or public
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "project_slug": "my-app",
+    "status": "provisioning",
+    "message": "Project provisioning started in background"
+  }
+}
+```
+
+### provision (Background Command)
+
+Runs in background via `at now` to avoid blocking SSH connections. Broadcasts status updates via Reverb WebSocket.
+
+**Status Flow:**
+1. `provisioning` - Initial state
+2. `creating_repo` - Creating GitHub repository from template
+3. `cloning` - Cloning repository
+4. `setting_up` - Running composer install, npm install, env setup
+5. `finalizing` - Registering with orchestrator
+6. `ready` - Complete (broadcast BEFORE Caddy reload to avoid WebSocket disconnect)
+
+### ReverbBroadcaster Service
+
+Broadcasts provisioning events via Pusher SDK to Reverb WebSocket server:
+
+```php
+$broadcaster->broadcast('provisioning', 'project.provision.status', [
+    'slug' => 'my-app',
+    'status' => 'ready',
+    'timestamp' => now()->toIso8601String(),
+]);
+```
+
+**Channels:**
+- `provisioning` - Global channel for all events
+- `project.{slug}` - Project-specific channel
+
+**Configuration** (~/.config/launchpad/config.json):
+```json
+{
+  "reverb": {
+    "app_id": "launchpad",
+    "app_key": "launchpad-key",
+    "app_secret": "launchpad-secret",
+    "host": "reverb.ccc",
+    "port": 443,
+    "internal_port": 6001
+  },
+  "services": {
+    "reverb": { "enabled": true }
+  }
+}
+```
+
+The broadcaster connects to internal port 6001 (HTTP) to avoid TLS certificate issues when broadcasting from the same server.

@@ -64,6 +64,8 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad worktrees` | List all git worktrees |
 | `launchpad worktree:refresh` | Auto-detect and link new worktrees |
 | `launchpad worktree:unlink <site> <wt>` | Remove worktree routing |
+| `launchpad project:create <name>` | Create project with async provisioning |
+| `launchpad provision <slug>` | Background provisioning (internal) |
 
 ## Services & Ports
 

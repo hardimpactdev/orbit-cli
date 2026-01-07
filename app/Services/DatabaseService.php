@@ -49,7 +49,7 @@ class DatabaseService
                 )
             ");
             $this->db->exec("CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug)");
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // If database initialization fails, we continue without it
             $this->db = null;
         }

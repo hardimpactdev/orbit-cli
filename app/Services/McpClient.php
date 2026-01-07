@@ -9,13 +9,21 @@ use RuntimeException;
 
 final class McpClient
 {
-    private string $baseUrl;
+    private readonly string $baseUrl;
+    private ?string $resolveHost = null;
 
     public function __construct(ConfigManager $config)
     {
         // CLI always calls localhost Orchestrator
         $orchestratorUrl = $config->get('orchestrator.url', 'http://localhost:8000');
-        $this->baseUrl = rtrim($orchestratorUrl, '/') . '/mcp';
+        $this->baseUrl = rtrim((string) $orchestratorUrl, '/') . '/mcp';
+
+        // Check if URL uses .ccc TLD - resolve to localhost for background processes
+        $parsedUrl = parse_url($this->baseUrl);
+        $host = $parsedUrl['host'] ?? null;
+        if ($host && str_ends_with($host, '.ccc')) {
+            $this->resolveHost = $host;
+        }
     }
 
     public function isConfigured(): bool
@@ -31,16 +39,30 @@ final class McpClient
      */
     public function callTool(string $toolName, array $arguments = []): array
     {
-        $response = Http::timeout(120)
-            ->post($this->baseUrl, [
-                'jsonrpc' => '2.0',
-                'method' => 'tools/call',
-                'params' => [
-                    'name' => $toolName,
-                    'arguments' => $arguments,
+        $http = Http::timeout(120);
+
+        // Add CURL resolve option to bypass DNS for .ccc domains
+        // This ensures the request works even in background processes without DNS access
+        if ($this->resolveHost) {
+            $http = $http->withOptions([
+                'curl' => [
+                    CURLOPT_RESOLVE => [
+                        "{$this->resolveHost}:443:127.0.0.1",
+                        "{$this->resolveHost}:80:127.0.0.1",
+                    ],
                 ],
-                'id' => uniqid(),
             ]);
+        }
+
+        $response = $http->post($this->baseUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'tools/call',
+            'params' => [
+                'name' => $toolName,
+                'arguments' => $arguments,
+            ],
+            'id' => uniqid(),
+        ]);
 
         if (! $response->successful()) {
             throw new RuntimeException(
@@ -57,7 +79,14 @@ final class McpClient
             throw new RuntimeException('MCP error: ' . ($error['message'] ?? 'Unknown error'));
         }
 
+        $mcpResult = $result['result'] ?? [];
+
+        // Extract meta from content if present (MCP response format)
+        if (isset($mcpResult['content'][0]['_meta'])) {
+            $mcpResult['meta'] = $mcpResult['content'][0]['_meta'];
+        }
+
         /** @var array<string, mixed> */
-        return $result['result'] ?? [];
+        return $mcpResult;
     }
 }

@@ -54,7 +54,7 @@ final class ProjectScanCommand extends Command
         }
 
         // Sort by name
-        usort($projects, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        usort($projects, fn($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
 
         if ($this->wantsJson()) {
             $this->outputJsonSuccess([

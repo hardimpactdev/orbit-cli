@@ -12,7 +12,7 @@ return [
     |
     */
 
-    'path' => env('LAUNCHPAD_PATH', $_SERVER['HOME'].'/.config/launchpad'),
+    'path' => env('LAUNCHPAD_PATH', getenv('HOME') ?: '/home/launchpad'.'/.config/launchpad'),
 
     /*
     |--------------------------------------------------------------------------

@@ -18,6 +18,7 @@ class PhpComposeGenerator
         $paths = $this->configManager->getPaths();
         $volumeMounts = $this->generateVolumeMounts($paths);
         $worktreeMount = $this->generateWorktreeMount();
+        $vibeKanbanMount = $this->generateVibeKanbanMount();
 
         $compose = "services:
   php-83:
@@ -29,7 +30,7 @@ class PhpComposeGenerator
     ports:
       - \"8083:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -44,7 +45,7 @@ class PhpComposeGenerator
     ports:
       - \"8084:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -77,6 +78,20 @@ networks:
 
         if (File::isDirectory($worktreesPath)) {
             return "      - {$worktreesPath}:/worktrees\n";
+        }
+
+        return '';
+    }
+
+    protected function generateVibeKanbanMount(): string
+    {
+        // Mount the vibe-kanban data directory for SQLite database access
+        // Used by orchestrator to create/manage VibeKanban projects
+        $vibeKanbanPath = $this->expandPath('~/.local/share/vibe-kanban');
+
+        if (File::isDirectory($vibeKanbanPath)) {
+            // Mount to same path so VibeKanbanClient code works unchanged
+            return "      - {$vibeKanbanPath}:{$vibeKanbanPath}\n";
         }
 
         return '';

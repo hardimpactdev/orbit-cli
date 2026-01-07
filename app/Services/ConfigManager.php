@@ -18,7 +18,7 @@ class ConfigManager
 
     public function getConfigPath(): string
     {
-        return $_SERVER['HOME'].'/.config/launchpad';
+        return (getenv('HOME') ?: '/home/launchpad').'/.config/launchpad';
     }
 
     public function load(): void
@@ -100,5 +100,37 @@ class ConfigManager
     public function isServiceEnabled(string $service): bool
     {
         return $this->get("services.{$service}.enabled", false);
+    }
+
+    // Reverb-specific configuration methods
+
+    public function getReverbConfig(): array
+    {
+        return [
+            'enabled' => $this->isServiceEnabled('reverb'),
+            'app_id' => $this->get('reverb.app_id', 'launchpad'),
+            'app_key' => $this->get('reverb.app_key', 'launchpad-key'),
+            'app_secret' => $this->get('reverb.app_secret', 'launchpad-secret'),
+            'host' => $this->get('reverb.host', 'reverb.'.$this->get('tld', 'test')),
+            'port' => $this->get('reverb.port', 443),
+            'scheme' => 'https',
+        ];
+    }
+
+    public function setReverbConfig(array $config): void
+    {
+        foreach ($config as $key => $value) {
+            $this->set("reverb.{$key}", $value);
+        }
+    }
+
+    public function enableService(string $service): void
+    {
+        $this->set("services.{$service}.enabled", true);
+    }
+
+    public function disableService(string $service): void
+    {
+        $this->set("services.{$service}.enabled", false);
     }
 }

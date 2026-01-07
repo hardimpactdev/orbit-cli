@@ -65,6 +65,23 @@ class CaddyfileGenerator
 ";
         }
 
+
+        // Add Reverb WebSocket service if enabled
+        if ($this->configManager->isServiceEnabled('reverb')) {
+            $tld = $this->configManager->get('tld') ?: 'test';
+            $caddyfile .= "reverb.{$tld} {
+    tls internal
+    @websocket {
+        path /app /app/*
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket launchpad-reverb:6001
+    reverse_proxy launchpad-reverb:6001
+}
+
+";
+        }
         File::put($this->caddyfilePath, $caddyfile);
     }
 
@@ -84,24 +101,21 @@ class CaddyfileGenerator
         foreach ($sites as $site) {
             $dockerPath = $this->getDockerPath($site['path'], $paths);
             $root = $this->getDocumentRoot($dockerPath);
-            $hotFile = $site['path'].'/public/hot';
-            $hasVite = file_exists($hotFile);
 
             $caddyfile .= "http://{$site['domain']}:8080 {\n";
             $caddyfile .= "    root * {$root}\n";
 
-            if ($hasVite) {
-                $caddyfile .= "\n";
-                $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*\n";
-                $caddyfile .= "    reverse_proxy @vite 172.18.0.1:5173\n";
-                $caddyfile .= "\n";
-                $caddyfile .= "    @ws {\n";
-                $caddyfile .= "        header Connection *Upgrade*\n";
-                $caddyfile .= "        header Upgrade websocket\n";
-                $caddyfile .= "    }\n";
-                $caddyfile .= "    reverse_proxy @ws 172.18.0.1:5173\n";
-                $caddyfile .= "\n";
-            }
+            // Always include Vite proxy - works when Vite is running, fails gracefully when not
+            $caddyfile .= "\n";
+            $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*\n";
+            $caddyfile .= "    reverse_proxy @vite 172.18.0.1:5173\n";
+            $caddyfile .= "\n";
+            $caddyfile .= "    @ws {\n";
+            $caddyfile .= "        header Connection *Upgrade*\n";
+            $caddyfile .= "        header Upgrade websocket\n";
+            $caddyfile .= "    }\n";
+            $caddyfile .= "    reverse_proxy @ws 172.18.0.1:5173\n";
+            $caddyfile .= "\n";
 
             $caddyfile .= "    php_server\n";
             $caddyfile .= "}\n\n";
