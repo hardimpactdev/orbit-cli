@@ -25,6 +25,7 @@ class StatusCommand extends Command
         'postgres' => 'launchpad-postgres',
         'redis' => 'launchpad-redis',
         'mailpit' => 'launchpad-mailpit',
+        'reverb' => 'launchpad-reverb',
     ];
 
     public function handle(

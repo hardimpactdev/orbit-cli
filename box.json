@@ -1,6 +1,6 @@
 {
     "main": "launchpad",
-    "output": "launchpad.phar",
+    "output": "builds/launchpad.phar",
     "chmod": "0755",
     "directories": [
         "app",
@@ -17,5 +17,6 @@
     "compactors": [
         "KevinGH\\Box\\Compactor\\Php",
         "KevinGH\\Box\\Compactor\\Json"
-    ]
+    ],
+    "check-requirements": false
 }

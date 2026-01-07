@@ -80,6 +80,7 @@ it('respects php-version file', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
+    $this->databaseService->shouldReceive('setProjectPhpVersion')->with('myproject', Mockery::any(), '8.4')->once();
 
     $scanner = new SiteScanner($this->configManager, $this->databaseService);
     $projects = $scanner->scan();

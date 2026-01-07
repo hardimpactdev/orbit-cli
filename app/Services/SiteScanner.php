@@ -111,19 +111,22 @@ class SiteScanner
 
     protected function detectPhpVersion(string $directory, string $name, string $default): string
     {
-        // Check for .php-version file first
+        // Check database first (primary source of truth)
+        $dbVersion = $this->databaseService->getPhpVersion($name);
+        if ($dbVersion !== null && $this->isValidPhpVersion($dbVersion)) {
+            return $dbVersion;
+        }
+
+        // Fallback: check .php-version file (legacy support)
         $phpVersionFile = $directory.'/.php-version';
         if (File::exists($phpVersionFile)) {
             $version = trim(File::get($phpVersionFile));
             if ($this->isValidPhpVersion($version)) {
+                // Migrate to database
+                $this->databaseService->setProjectPhpVersion($name, $directory, $version);
+
                 return $version;
             }
-        }
-
-        // Check database override
-        $dbVersion = $this->databaseService->getPhpVersion($name);
-        if ($dbVersion !== null) {
-            return $dbVersion;
         }
 
         // Check config override (legacy, will be migrated)
@@ -137,7 +140,7 @@ class SiteScanner
 
     protected function isValidPhpVersion(string $version): bool
     {
-        return in_array($version, ['8.3', '8.4']);
+        return in_array($version, ['8.3', '8.4', '8.5']);
     }
 
     protected function expandPath(string $path): string

@@ -202,6 +202,7 @@ final class ProvisionCommand extends Command
         // Step 1: Composer install WITHOUT running scripts
         // This prevents setup scripts from running before .env is configured
         if (file_exists("{$this->projectPath}/composer.json")) {
+            $this->broadcast('installing_composer');
             $this->info('  Installing Composer dependencies (no scripts)...');
             Process::path($this->projectPath)->timeout(600)->run('composer install --no-interaction --no-scripts');
         }
@@ -210,6 +211,7 @@ final class ProvisionCommand extends Command
         if (file_exists("{$this->projectPath}/package.json")) {
             $home = $_SERVER['HOME'];
             if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
+                $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with Bun...');
                 $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
                 Process::path($this->projectPath)->timeout(600)->run("{$bunPath} install");
@@ -222,6 +224,20 @@ final class ProvisionCommand extends Command
             } else {
                 $this->info('  Installing dependencies with npm...');
                 Process::path($this->projectPath)->timeout(600)->run('npm install');
+            }
+
+            // Run build if package.json has a build script
+            $this->broadcast('building');
+            $packageJson = json_decode(file_get_contents("{$this->projectPath}/package.json"), true);
+            if (isset($packageJson['scripts']['build'])) {
+                $this->info('  Building assets...');
+                $home = $_SERVER['HOME'];
+                $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
+                if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
+                    Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(600)->run("{$bunPath} run build 2>&1");
+                } else {
+                    Process::path($this->projectPath)->timeout(600)->run('npm run build 2>&1');
+                }
             }
         }
 
