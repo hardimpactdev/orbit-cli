@@ -513,7 +513,10 @@ final class ProvisionCommand extends Command
 
         $env = file_get_contents($envPath);
 
-        // Configure APP_URL with the project domain
+        // Configure APP_NAME and APP_URL with the project slug/domain
+        $env = $this->setEnvValue($env, 'APP_NAME', $this->slug);
+
+        // Configure APP_URL
         $env = preg_replace('/^APP_URL=.*/m', "APP_URL=https://{$this->slug}.ccc", $env);
 
         // Get driver options (null = keep template default)
