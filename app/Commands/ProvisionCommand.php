@@ -23,7 +23,9 @@ final class ProvisionCommand extends Command
         {--db-driver= : Database driver (sqlite, pgsql)}
         {--session-driver= : Session driver (file, database, redis)}
         {--cache-driver= : Cache driver (file, database, redis)}
-        {--queue-driver= : Queue driver (sync, database, redis)}';
+        {--queue-driver= : Queue driver (sync, database, redis)}
+        {--minimal : Only run composer install, skip npm/build/env/migrations}
+        {--fork : Fork the repository instead of importing as new}';
 
     protected $description = 'Provision a project (create repo, clone, setup, register with orchestrator)';
 
@@ -65,11 +67,24 @@ final class ProvisionCommand extends Command
         $cloneUrl = $this->option('clone-url');
         $template = $this->option('template');
         $visibility = $this->option('visibility') ?: 'private';
+        $isFork = (bool) $this->option('fork');
 
         // Broadcast immediately that provisioning has started
         $this->broadcast('provisioning');
 
         try {
+            // Step 0: Handle fork mode (fork the repository using gh repo fork)
+            if ($isFork && $cloneUrl && ! $template) {
+                $this->broadcast('forking');
+                $forkResult = $this->forkRepository($cloneUrl, $config);
+                $githubRepo = $forkResult['repo'];
+                $cloneUrl = $forkResult['clone_url'];
+
+                if ($this->aborted) {
+                    return 1;
+                }
+            }
+
             // Step 1: Create GitHub repository from template (if requested)
             if ($template) {
                 // Figure out github repo name if not provided
@@ -107,6 +122,40 @@ final class ProvisionCommand extends Command
 
                 if ($this->aborted) {
                     return 1;
+                }
+
+                // Step 2b: Import as new repo if cloning different user's repo (and not using template/fork)
+                // This happens when user selected "Import" instead of "Fork"
+                if (! $template && ! $isFork && ! $githubRepo) {
+                    // Check if the cloned repo belongs to someone else
+                    $sourceRepo = $this->extractRepoFromUrl($cloneUrl);
+                    $username = $config->get('github_username');
+                    if (! $username) {
+                        $whoami = shell_exec('gh api user --jq .login 2>/dev/null');
+                        if ($whoami) {
+                            $username = trim($whoami);
+                            $config->set('github_username', $username);
+                        }
+                    }
+
+                    if ($username) {
+                        $targetRepo = "{$username}/{$this->slug}";
+                        $sourceOwner = explode('/', $sourceRepo)[0];
+
+                        // If source repo owner is different from current user, import as new repo
+                        if (strtolower($sourceOwner) !== strtolower((string) $username)) {
+                            $this->broadcast('importing');
+                            $this->importAsNewRepo($targetRepo, $visibility);
+                            $githubRepo = $targetRepo;
+
+                            if ($this->aborted) {
+                                return 1;
+                            }
+                        } else {
+                            // User is cloning their own repo, just record it
+                            $githubRepo = $sourceRepo;
+                        }
+                    }
                 }
             }
 
@@ -152,6 +201,100 @@ final class ProvisionCommand extends Command
         }
     }
 
+    /**
+     * Fork a repository using gh repo fork.
+     *
+     * @return array{repo: string, clone_url: string}
+     */
+    private function forkRepository(string $sourceUrl, ConfigManager $config): array
+    {
+        // Extract owner/repo from URL
+        $sourceRepo = $this->extractRepoFromUrl($sourceUrl);
+        $this->info("Forking repository: {$sourceRepo}");
+
+        // Fork the repository
+        $result = Process::timeout(120)->run("gh repo fork {$sourceRepo} --clone=false");
+
+        if (! $result->successful()) {
+            throw new \RuntimeException('Failed to fork repository: '.$result->errorOutput());
+        }
+
+        // Get the fork's full name (user/repo)
+        $username = $config->get('github_username');
+        if (! $username) {
+            $whoami = shell_exec('gh api user --jq .login 2>/dev/null');
+            if ($whoami) {
+                $username = trim($whoami);
+                $config->set('github_username', $username);
+            }
+        }
+
+        // Extract just the repo name from source
+        $repoName = basename($sourceRepo);
+        $forkRepo = "{$username}/{$repoName}";
+        $forkUrl = "git@github.com:{$forkRepo}.git";
+
+        $this->info("Repository forked to: {$forkRepo}");
+
+        // Wait for GitHub to propagate
+        sleep(3);
+
+        return [
+            'repo' => $forkRepo,
+            'clone_url' => $forkUrl,
+        ];
+    }
+
+    /**
+     * Import a cloned repository as a new repo (change remote and push).
+     */
+    private function importAsNewRepo(string $newRepo, string $visibility): void
+    {
+        $this->info("Importing as new repository: {$newRepo}");
+
+        // Create new empty repository
+        $result = Process::timeout(60)->run("gh repo create {$newRepo} --{$visibility} --source=".escapeshellarg($this->projectPath).' --push');
+
+        if (! $result->successful()) {
+            // If gh repo create with --source fails, try manual approach
+            $this->warn('gh repo create with --source failed, trying manual approach...');
+
+            // Create empty repo
+            $createResult = Process::timeout(60)->run("gh repo create {$newRepo} --{$visibility}");
+            if (! $createResult->successful()) {
+                throw new \RuntimeException('Failed to create new repository: '.$createResult->errorOutput());
+            }
+
+            // Change remote
+            $newUrl = "git@github.com:{$newRepo}.git";
+            Process::path($this->projectPath)->run("git remote set-url origin {$newUrl}");
+
+            // Push all branches and tags
+            Process::path($this->projectPath)->timeout(120)->run('git push -u origin --all');
+            Process::path($this->projectPath)->timeout(60)->run('git push origin --tags');
+        }
+
+        $this->info("Repository imported as: {$newRepo}");
+    }
+
+    /**
+     * Extract owner/repo from a git URL.
+     */
+    private function extractRepoFromUrl(string $url): string
+    {
+        // Handle git@github.com:owner/repo.git
+        if (preg_match('/git@github\.com:([^\/]+\/[^\/]+?)(?:\.git)?$/', $url, $matches)) {
+            return $matches[1];
+        }
+        // Handle https://github.com/owner/repo
+        if (preg_match('/github\.com\/([^\/]+\/[^\/\s]+?)(?:\.git)?$/', $url, $matches)) {
+            return $matches[1];
+        }
+
+        // Assume it's already owner/repo format
+        return str_replace('.git', '', $url);
+    }
+
     private function createGitHubRepo(string $repo, string $visibility, string $template): void
     {
         $this->info("Creating GitHub repository: {$repo} from template {$template}");
@@ -159,9 +302,7 @@ final class ProvisionCommand extends Command
         // Check if repo already exists
         $checkResult = Process::run("gh repo view {$repo} 2>/dev/null");
         if ($checkResult->successful()) {
-            $this->info('Repository already exists, skipping creation');
-
-            return;
+            throw new \RuntimeException("Repository '{$repo}' already exists. Please choose a different project name.");
         }
 
         $command = "gh repo create {$repo} --{$visibility} --template ".escapeshellarg($template).' --clone=false';
@@ -202,6 +343,22 @@ final class ProvisionCommand extends Command
 
     private function runSetup(): void
     {
+        $isMinimal = (bool) $this->option('minimal');
+
+        // Minimal mode: just composer install, nothing else
+        if ($isMinimal) {
+            $this->info('Running minimal setup (composer install only)...');
+            if (file_exists("{$this->projectPath}/composer.json")) {
+                $this->broadcast('installing_composer');
+                $this->info('  Installing Composer dependencies...');
+                Process::path($this->projectPath)->timeout(600)->run('composer install --no-interaction');
+                $this->info('  Composer install completed');
+            }
+            $this->info('Minimal setup completed');
+
+            return;
+        }
+
         $this->info('Running project setup...');
 
         // Step 1: Composer install WITHOUT running scripts
@@ -221,12 +378,40 @@ final class ProvisionCommand extends Command
             if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
                 $packageManager = 'bun';
                 $this->broadcast('installing_npm');
-                // Remove GitHub Package Registry config to use npm instead
+                // Remove lock files to allow fresh install
                 @unlink("{$this->projectPath}/bunfig.toml");
                 @unlink("{$this->projectPath}/bun.lock");
                 @unlink("{$this->projectPath}/bun.lockb");
                 $this->info('  Installing dependencies with Bun...');
-                Process::path($this->projectPath)->timeout(600)->run("{$bunPath} install");
+
+                // Run bun install with try-catch for timeout handling
+                $bunSuccess = false;
+                try {
+                    $bunResult = Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
+                        ->path($this->projectPath)
+                        ->timeout(180) // 3 minute timeout for bun
+                        ->run("{$bunPath} install 2>&1");
+
+                    $bunSuccess = $bunResult->successful();
+                    if (! $bunSuccess) {
+                        $this->warn('  Bun install failed: '.substr($bunResult->output(), 0, 500));
+                    }
+                } catch (\Illuminate\Process\Exceptions\ProcessTimedOutException) {
+                    $this->warn('  Bun install timed out after 180 seconds');
+                }
+
+                if (! $bunSuccess) {
+                    $this->info('  Falling back to npm...');
+                    $packageManager = 'npm';
+                    $npmResult = Process::path($this->projectPath)->timeout(600)->run('npm install --legacy-peer-deps 2>&1');
+                    if (! $npmResult->successful()) {
+                        $this->warn('  npm install failed: '.substr($npmResult->output(), 0, 500));
+                    } else {
+                        $this->info('  npm install completed successfully');
+                    }
+                } else {
+                    $this->info('  Bun install completed');
+                }
             } elseif (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
                 $packageManager = 'pnpm';
                 $this->broadcast('installing_npm');
@@ -240,7 +425,12 @@ final class ProvisionCommand extends Command
             } else {
                 $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with npm...');
-                Process::path($this->projectPath)->timeout(600)->run('npm install');
+                $npmResult = Process::path($this->projectPath)->timeout(600)->run('npm install --legacy-peer-deps 2>&1');
+                if (! $npmResult->successful()) {
+                    $this->warn('  npm install failed: '.substr($npmResult->output(), 0, 500));
+                } else {
+                    $this->info('  npm install completed');
+                }
             }
 
             // Run build if package.json has a build script

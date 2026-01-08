@@ -18,6 +18,7 @@ final class ProjectCreateCommand extends Command
         {name : Project name}
         {--template= : Create from template repository (user/repo format)}
         {--clone= : Clone existing repository (user/repo or git URL)}
+        {--fork : Fork the repository instead of importing as new}
         {--visibility=private : Repository visibility (private/public)}
         {--path= : Override default project path}
         {--php= : PHP version to use (8.3, 8.4, 8.5)}
@@ -25,6 +26,7 @@ final class ProjectCreateCommand extends Command
         {--session-driver= : Session driver (file, database, redis)}
         {--cache-driver= : Cache driver (file, database, redis)}
         {--queue-driver= : Queue driver (sync, database, redis)}
+        {--minimal : Only run composer install, skip npm/build/env/migrations}
         {--json : Output as JSON}';
 
     protected $description = 'Create a new project (starts provisioning in background)';
@@ -103,6 +105,16 @@ final class ProjectCreateCommand extends Command
         }
         if ($queueDriver = $this->option('queue-driver')) {
             $provisionCmd .= ' --queue-driver='.escapeshellarg($queueDriver);
+        }
+
+        // Minimal mode: only composer install
+        if ($this->option('minimal')) {
+            $provisionCmd .= ' --minimal';
+        }
+
+        // Fork mode: fork instead of import
+        if ($this->option('fork')) {
+            $provisionCmd .= ' --fork';
         }
 
         // Step 3: Start background process (fully detached from SSH session)
