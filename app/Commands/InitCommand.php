@@ -143,6 +143,13 @@ class InitCommand extends Command
             return $result;
         });
 
+        // 8. Install composer-link globally for package development
+        $this->task('Installing composer-link plugin', function () {
+            $result = Process::run('composer global config --no-plugins allow-plugins.sandersander/composer-link true && composer global require sandersander/composer-link --quiet');
+
+            return $result->successful();
+        });
+
         $this->newLine();
         $this->warn('Point your DNS to 127.0.0.1:');
         $this->line('  System Settings → Network → Wi-Fi → Details → DNS');

@@ -22,7 +22,7 @@ class SitesCommand extends Command
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
-                'sites' => array_map(fn ($site) => [
+                'sites' => array_values(array_map(fn ($site) => [
                     'name' => $site['name'],
                     'display_name' => $site['display_name'] ?? ucwords(str_replace(['-', '_'], ' ', $site['name'])),
                     'github_repo' => $site['github_repo'] ?? null,
@@ -32,7 +32,7 @@ class SitesCommand extends Command
                     'php_version' => $site['php_version'],
                     'has_custom_php' => $site['has_custom_php'],
                     'secure' => true, // All sites use TLS via Caddy
-                ], $sites),
+                ], $sites)),
                 'default_php_version' => $defaultPhp,
                 'sites_count' => count($sites),
             ]);

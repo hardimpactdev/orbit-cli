@@ -390,8 +390,8 @@ final class ProvisionCommand extends Command
                 try {
                     $bunResult = Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
                         ->path($this->projectPath)
-                        ->timeout(180) // 3 minute timeout for bun
-                        ->run("{$bunPath} install --no-progress 2>&1");
+                        ->timeout(200) // Give extra time for system timeout to work
+                        ->run("timeout 60 {$bunPath} install --no-progress 2>&1");
 
                     $bunSuccess = $bunResult->successful();
                     if (! $bunSuccess) {
