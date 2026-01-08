@@ -412,8 +412,8 @@ final class ProvisionCommand extends Command
                 try {
                     $bunResult = Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
                         ->path($this->projectPath)
-                        ->timeout(200) // Give extra time for system timeout to work
-                        ->run("timeout 60 {$bunPath} install --no-progress 2>&1");
+                        ->timeout(60)
+                        ->run("timeout 30 {$bunPath} install --no-progress 2>&1");
 
                     $bunSuccess = $bunResult->successful();
                     if (! $bunSuccess) {
@@ -457,7 +457,7 @@ final class ProvisionCommand extends Command
             if (isset($packageJson['scripts']['build'])) {
                 $this->info("  Building assets with {$packageManager}...");
                 $buildResult = match ($packageManager) {
-                    'bun' => Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(600)->run("{$bunPath} run --silent build 2>&1"),
+                    'bun' => Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(60)->run("timeout 30 {$bunPath} run --silent build 2>&1"),
                     'pnpm' => Process::path($this->projectPath)->timeout(600)->run('pnpm run build 2>&1'),
                     'yarn' => Process::path($this->projectPath)->timeout(600)->run('yarn run build 2>&1'),
                     default => Process::path($this->projectPath)->timeout(600)->run('npm run build 2>&1'),
