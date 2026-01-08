@@ -128,7 +128,7 @@ final class ProjectCreateCommand extends Command
         // Use nohup with bash -l (login shell) to properly source ~/.profile
         // This ensures PATH includes ~/.local/bin, ~/.bun/bin, etc.
         $escapedCmd = str_replace("'", "'\\'\"'\"'", $provisionCmd);
-        exec("nohup bash -lc '{$escapedCmd}' > {$logFile} 2>&1 &");
+        exec("nohup bash -lc '{$escapedCmd}' < /dev/null > {$logFile} 2>&1 &");
 
         // Only show info messages if not JSON mode
         if (! $this->wantsJson()) {
