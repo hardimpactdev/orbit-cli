@@ -300,6 +300,12 @@ final class ProvisionCommand extends Command
         // Write PHP version file
         $phpVersion = $this->getPhpVersion();
         file_put_contents("{$this->projectPath}/.php-version", "{$phpVersion}\n");
+        // Update database with PHP version (takes precedence over .php-version file)
+        app(\App\Services\DatabaseService::class)->setProjectPhpVersion(
+            $this->slug,
+            $this->projectPath,
+            $phpVersion
+        );
 
         $this->info('Setup completed');
     }
