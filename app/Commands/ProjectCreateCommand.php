@@ -128,7 +128,7 @@ final class ProjectCreateCommand extends Command
         // Write a launcher script that will run the provision command
         // This ensures complete detachment from the parent process and SSH session
         $launcherScript = "/tmp/launch-provision-{$slug}.sh";
-        $scriptContent = "#!/bin/bash\n{$provisionCmd} > {$logFile} 2>&1\n";
+        $scriptContent = "#!/bin/bash\nexport PATH=\"\$HOME/.bun/bin:\$HOME/.local/bin:\$HOME/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin\"\n{$provisionCmd} > {$logFile} 2>&1\n";
         file_put_contents($launcherScript, $scriptContent);
         chmod($launcherScript, 0755);
 

@@ -55,7 +55,7 @@ final class ProvisionCommand extends Command
         if (empty($paths)) {
             $this->broadcast('failed', 'No project paths configured');
 
-            return 1;
+            throw new \RuntimeException('Provisioning failed');
         }
 
         $basePath = $paths[0];
@@ -82,7 +82,7 @@ final class ProvisionCommand extends Command
                 $cloneUrl = $forkResult['clone_url'];
 
                 if ($this->aborted) {
-                    return 1;
+                    throw new \RuntimeException('Provisioning failed');
                 }
             }
 
@@ -108,7 +108,7 @@ final class ProvisionCommand extends Command
                     $this->createGitHubRepo($githubRepo, $visibility, $template);
 
                     if ($this->aborted) {
-                        return 1;
+                        throw new \RuntimeException('Provisioning failed');
                     }
 
                     // Set clone URL to the new repo
@@ -122,7 +122,7 @@ final class ProvisionCommand extends Command
                 $this->cloneRepository($cloneUrl);
 
                 if ($this->aborted) {
-                    return 1;
+                    throw new \RuntimeException('Provisioning failed');
                 }
 
                 // Step 2b: Import as new repo if cloning different user's repo (and not using template/fork)
@@ -150,7 +150,7 @@ final class ProvisionCommand extends Command
                             $githubRepo = $targetRepo;
 
                             if ($this->aborted) {
-                                return 1;
+                                throw new \RuntimeException('Provisioning failed');
                             }
                         } else {
                             // User is cloning their own repo, just record it
@@ -172,7 +172,7 @@ final class ProvisionCommand extends Command
             $this->runSetup();
 
             if ($this->aborted) {
-                return 1;
+                throw new \RuntimeException('Provisioning failed');
             }
 
             // Step 4: Register with orchestrator (if configured)
@@ -198,7 +198,7 @@ final class ProvisionCommand extends Command
             $this->error('Provisioning failed: '.$e->getMessage());
             $this->broadcast('failed', $e->getMessage());
 
-            return 1;
+            throw new \RuntimeException('Provisioning failed');
         }
     }
 
@@ -376,6 +376,28 @@ final class ProvisionCommand extends Command
             $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
             $packageManager = 'npm'; // default
 
+            // Check for conflicting lock files
+            $lockFiles = [];
+            if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
+                $lockFiles[] = 'bun.lock';
+            }
+            if (file_exists("{$this->projectPath}/package-lock.json")) {
+                $lockFiles[] = 'package-lock.json';
+            }
+            if (file_exists("{$this->projectPath}/yarn.lock")) {
+                $lockFiles[] = 'yarn.lock';
+            }
+            if (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
+                $lockFiles[] = 'pnpm-lock.yaml';
+            }
+
+            if (count($lockFiles) > 1) {
+                $this->broadcast('failed', 'Multiple lock files detected: '.implode(', ', $lockFiles));
+                $this->error('  Multiple lock files detected: '.implode(', ', $lockFiles));
+                $this->error('  Please remove all but one lock file and try again.');
+                throw new \RuntimeException('Provisioning failed');
+            }
+
             if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
                 $packageManager = 'bun';
                 $this->broadcast('installing_npm');
@@ -402,17 +424,12 @@ final class ProvisionCommand extends Command
                 }
 
                 if (! $bunSuccess) {
-                    $this->info('  Falling back to npm...');
-                    $packageManager = 'npm';
-                    $npmResult = Process::path($this->projectPath)->timeout(600)->run('npm install --legacy-peer-deps 2>&1');
-                    if (! $npmResult->successful()) {
-                        $this->warn('  npm install failed: '.substr($npmResult->output(), 0, 500));
-                    } else {
-                        $this->info('  npm install completed successfully');
-                    }
-                } else {
-                    $this->info('  Bun install completed');
+                    $this->broadcast('failed', 'Bun install failed');
+                    $this->error('  Bun install failed: '.substr(isset($bunResult) ? $bunResult->output() : 'Timed out', 0, 500));
+                    throw new \RuntimeException('Provisioning failed');
                 }
+
+                $this->info('  Bun install completed');
             } elseif (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
                 $packageManager = 'pnpm';
                 $this->broadcast('installing_npm');
