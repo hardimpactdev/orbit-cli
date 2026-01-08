@@ -37,6 +37,7 @@ class SiteScanner
                     $project = [
                         'name' => $name,
                         'display_name' => $this->getDisplayName($customPath, $name),
+                        'github_repo' => $this->getGitHubRepo($customPath),
                         'path' => $customPath,
                         'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
@@ -81,6 +82,7 @@ class SiteScanner
                 $project = [
                     'name' => $name,
                     'display_name' => $this->getDisplayName($directory, $name),
+                    'github_repo' => $this->getGitHubRepo($directory),
                     'path' => $directory,
                     'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
@@ -191,5 +193,24 @@ class SiteScanner
 
         // Generate display name from slug: "my-cool-project" -> "My Cool Project"
         return ucwords(str_replace(['-', '_'], ' ', $slug));
+    }
+
+    /**
+     * Get GitHub repo URL from .git/config if available.
+     */
+    protected function getGitHubRepo(string $directory): ?string
+    {
+        $gitConfig = $directory.'/.git/config';
+        if (! File::exists($gitConfig)) {
+            return null;
+        }
+
+        $configContent = File::get($gitConfig);
+        // Match git@github.com:owner/repo.git or https://github.com/owner/repo.git
+        if (preg_match("/url\s*=\s*(?:git@github\.com:|https:\/\/github\.com\/)([^\/]+\/[^\/\s]+?)(?:\.git)?$/m", $configContent, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }
