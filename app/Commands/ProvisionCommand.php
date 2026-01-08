@@ -634,7 +634,7 @@ final class ProvisionCommand extends Command
     private function restartPhpContainer(): void
     {
         $phpVersion = $this->getPhpVersion();
-        $container = "launchpad-php-{$phpVersion}";
+        $container = 'launchpad-php-'.str_replace('.', '', $phpVersion);
 
         $this->info("  Restarting {$container} to clear cached state...");
         $result = Process::timeout(30)->run("docker restart {$container} 2>&1");
