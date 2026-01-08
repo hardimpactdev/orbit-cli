@@ -131,6 +131,9 @@ final class ProvisionCommand extends Command
                 $this->registerWithOrchestrator($mcp, $githubRepo);
             }
 
+            // Step 5: Restart PHP container to clear any cached state
+            $this->restartPhpContainer();
+
             // Broadcast ready status BEFORE Caddy reload
             // (Caddy reload disconnects WebSocket clients temporarily)
             $this->broadcast('ready');
@@ -289,6 +292,9 @@ final class ProvisionCommand extends Command
                 Process::path($this->projectPath)->timeout(300)->run('composer run-script post-autoload-dump 2>/dev/null || true');
             }
         }
+
+        // Step 9: Configure trusted proxies for reverse proxy support (Laravel 11+)
+        $this->configureTrustedProxies();
 
         // Write PHP version file
         $phpVersion = $this->detectPhpVersion();
@@ -490,6 +496,90 @@ final class ProvisionCommand extends Command
 
         $this->broadcaster->broadcast("project.{$this->slug}", 'project.provision.status', $eventData);
         $this->broadcaster->broadcast('provisioning', 'project.provision.status', $eventData);
+    }
+
+    /**
+     * Configure trusted proxies for Laravel 11+ projects.
+     * This is required because projects run behind Caddy reverse proxy.
+     */
+    private function configureTrustedProxies(): void
+    {
+        $bootstrapPath = "{$this->projectPath}/bootstrap/app.php";
+        if (! file_exists($bootstrapPath)) {
+            return;
+        }
+
+        $content = file_get_contents($bootstrapPath);
+
+        // Check if this is Laravel 11+ (uses Application::configure)
+        if (! str_contains($content, 'Application::configure')) {
+            $this->info('  Skipping trusted proxies (not Laravel 11+)');
+
+            return;
+        }
+
+        // Check if trusted proxies already configured
+        if (str_contains($content, 'trustProxies')) {
+            $this->info('  Trusted proxies already configured');
+
+            return;
+        }
+
+        // Add the Request import if not present
+        if (! str_contains($content, 'use Illuminate\Http\Request')) {
+            $content = str_replace(
+                'use Illuminate\Foundation\Application;',
+                "use Illuminate\Foundation\Application;\nuse Illuminate\Http\Request;",
+                $content
+            );
+        }
+
+        // Add trusted proxies configuration to withMiddleware
+        $trustedProxiesCode = '$middleware->trustProxies(at: "*", headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO);';
+
+        // Pattern for empty middleware callback
+        $emptyPattern = '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{\s*\/\/\s*\}\)/s';
+        if (preg_match($emptyPattern, $content)) {
+            $content = preg_replace(
+                $emptyPattern,
+                "->withMiddleware(function (Middleware \$middleware): void {\n        {$trustedProxiesCode}\n    })",
+                $content
+            );
+        } else {
+            // Pattern for middleware callback with existing content - add at the beginning
+            $middlewarePattern = '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{/s';
+            if (preg_match($middlewarePattern, $content)) {
+                $content = preg_replace(
+                    $middlewarePattern,
+                    "->withMiddleware(function (Middleware \$middleware): void {\n        {$trustedProxiesCode}\n",
+                    $content
+                );
+            }
+        }
+
+        file_put_contents($bootstrapPath, $content);
+        $this->info('  Configured trusted proxies for reverse proxy support');
+    }
+
+    /**
+     * Restart the PHP container to clear any cached state.
+     * This ensures the new project's environment is loaded fresh.
+     */
+    private function restartPhpContainer(): void
+    {
+        $phpVersion = $this->detectPhpVersion();
+        $container = "launchpad-php-{$phpVersion}";
+
+        $this->info("  Restarting {$container} to clear cached state...");
+        $result = Process::timeout(30)->run("docker restart {$container} 2>&1");
+
+        if ($result->successful()) {
+            $this->info('  PHP container restarted');
+            // Wait a moment for container to be ready
+            sleep(2);
+        } else {
+            $this->warn("  Failed to restart PHP container: {$result->output()}");
+        }
     }
 
     private function abort(string $reason): never

@@ -152,6 +152,12 @@ final class ProjectUpdateCommand extends Command
                 }
             }
 
+            // Step 6: Configure trusted proxies if not already configured (Laravel 11+)
+            $trustedProxiesResult = $this->configureTrustedProxies($path);
+            if ($trustedProxiesResult !== null) {
+                $results['steps']['trusted_proxies'] = $trustedProxiesResult;
+            }
+
             // Regenerate Caddy config in case anything changed
             $caddy->generate();
             $caddy->reload();
@@ -287,5 +293,68 @@ final class ProjectUpdateCommand extends Command
     private function wantsJson(): bool
     {
         return (bool) $this->option('json') || ! $this->input->isInteractive();
+    }
+
+    /**
+     * Configure trusted proxies for Laravel 11+ projects.
+     * This is required because projects run behind Caddy reverse proxy.
+     *
+     * @return array<string, mixed>|null Returns result array if changes were made, null if skipped
+     */
+    private function configureTrustedProxies(string $path): ?array
+    {
+        $bootstrapPath = "{$path}/bootstrap/app.php";
+        if (! file_exists($bootstrapPath)) {
+            return null;
+        }
+
+        $content = file_get_contents($bootstrapPath);
+
+        // Check if this is Laravel 11+ (uses Application::configure)
+        if (! str_contains($content, 'Application::configure')) {
+            return null; // Not Laravel 11+, skip silently
+        }
+
+        // Check if trusted proxies already configured
+        if (str_contains($content, 'trustProxies')) {
+            return ['skipped' => true, 'reason' => 'already_configured'];
+        }
+
+        // Add the Request import if not present
+        if (! str_contains($content, 'use Illuminate\Http\Request')) {
+            $content = str_replace(
+                'use Illuminate\Foundation\Application;',
+                "use Illuminate\Foundation\Application;\nuse Illuminate\Http\Request;",
+                $content
+            );
+        }
+
+        // Add trusted proxies configuration to withMiddleware
+        $trustedProxiesCode = '$middleware->trustProxies(at: "*", headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO);';
+
+        // Pattern for empty middleware callback
+        $emptyPattern = '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{\s*\/\/\s*\}\)/s';
+        if (preg_match($emptyPattern, $content)) {
+            $content = preg_replace(
+                $emptyPattern,
+                "->withMiddleware(function (Middleware \$middleware): void {\n        {$trustedProxiesCode}\n    })",
+                $content
+            );
+        } else {
+            // Pattern for middleware callback with existing content - add at the beginning
+            $middlewarePattern = '/->withMiddleware\(function\s*\(Middleware\s+\$middleware\)\s*:\s*void\s*\{/s';
+            if (preg_match($middlewarePattern, $content)) {
+                $content = preg_replace(
+                    $middlewarePattern,
+                    "->withMiddleware(function (Middleware \$middleware): void {\n        {$trustedProxiesCode}\n",
+                    $content
+                );
+            }
+        }
+
+        file_put_contents($bootstrapPath, $content);
+        $this->log('Configured trusted proxies for reverse proxy support');
+
+        return ['success' => true, 'configured' => true];
     }
 }
