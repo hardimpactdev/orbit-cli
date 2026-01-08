@@ -18,6 +18,7 @@ final class ProjectUpdateCommand extends Command
     protected $signature = 'project:update
         {path? : Path to the project directory}
         {--site= : Site name (alternative to path)}
+        {--no-git : Skip git pull (rebuild mode)}
         {--no-deps : Skip dependency installation}
         {--no-migrate : Skip database migrations}
         {--json : Output as JSON}';
@@ -67,19 +68,24 @@ final class ProjectUpdateCommand extends Command
         ];
 
         try {
-            // Step 1: Git pull
-            $this->info('Pulling latest changes...');
-            $gitResult = Process::path($path)->timeout(120)->run('git pull');
+            // Step 1: Git pull (unless --no-git is set)
+            if (! $this->option('no-git')) {
+                $this->info('Pulling latest changes...');
+                $gitResult = Process::path($path)->timeout(120)->run('git pull');
 
-            $results['steps']['git_pull'] = [
-                'success' => $gitResult->successful(),
-                'output' => trim($gitResult->output()),
-            ];
+                $results['steps']['git_pull'] = [
+                    'success' => $gitResult->successful(),
+                    'output' => trim($gitResult->output()),
+                ];
 
-            if (! $gitResult->successful()) {
-                $results['steps']['git_pull']['error'] = $gitResult->errorOutput();
+                if (! $gitResult->successful()) {
+                    $results['steps']['git_pull']['error'] = $gitResult->errorOutput();
 
-                return $this->outputResult($results, false, 'Git pull failed');
+                    return $this->outputResult($results, false, 'Git pull failed');
+                }
+            } else {
+                $this->info('Skipping git pull (rebuild mode)...');
+                $results['steps']['git_pull'] = ['skipped' => true];
             }
 
             // Step 2: Composer install (if composer.json exists and --no-deps not set)
@@ -96,21 +102,43 @@ final class ProjectUpdateCommand extends Command
                 }
             }
 
-            // Step 3: NPM install (if package.json exists and --no-deps not set)
+            // Step 3: NPM/package manager install (if package.json exists and --no-deps not set)
             if (! $this->option('no-deps') && file_exists("{$path}/package.json")) {
-                $this->info('Installing NPM dependencies...');
-                $npmResult = Process::path($path)->timeout(300)->run('npm install');
+                $packageManager = $this->detectPackageManager($path);
+                $this->info("Installing dependencies with {$packageManager}...");
+
+                $installCommand = $this->getInstallCommand($packageManager);
+                $installResult = Process::path($path)->timeout(600)->run($installCommand);
 
                 $results['steps']['npm'] = [
-                    'success' => $npmResult->successful(),
+                    'success' => $installResult->successful(),
+                    'package_manager' => $packageManager,
                 ];
 
-                if (! $npmResult->successful()) {
-                    $results['steps']['npm']['error'] = $npmResult->errorOutput();
+                if (! $installResult->successful()) {
+                    $results['steps']['npm']['error'] = $installResult->errorOutput();
+                }
+
+                // Step 4: Build assets (if build script exists)
+                $packageJson = json_decode(file_get_contents("{$path}/package.json"), true);
+                if (isset($packageJson['scripts']['build'])) {
+                    $this->info("Building assets with {$packageManager}...");
+
+                    $buildCommand = $this->getBuildCommand($packageManager);
+                    $buildResult = Process::path($path)->timeout(600)->run($buildCommand);
+
+                    $results['steps']['build'] = [
+                        'success' => $buildResult->successful(),
+                        'package_manager' => $packageManager,
+                    ];
+
+                    if (! $buildResult->successful()) {
+                        $results['steps']['build']['error'] = $buildResult->errorOutput();
+                    }
                 }
             }
 
-            // Step 4: Run migrations (if artisan exists and --no-migrate not set)
+            // Step 5: Run migrations (if artisan exists and --no-migrate not set)
             if (! $this->option('no-migrate') && file_exists("{$path}/artisan")) {
                 $this->info('Running migrations...');
                 $migrateResult = Process::path($path)->timeout(120)->run('php artisan migrate --force');
@@ -124,23 +152,6 @@ final class ProjectUpdateCommand extends Command
                 }
             }
 
-            // Step 5: Build assets (if npm build script exists)
-            if (! $this->option('no-deps') && file_exists("{$path}/package.json")) {
-                $packageJson = json_decode(file_get_contents("{$path}/package.json"), true);
-                if (isset($packageJson['scripts']['build'])) {
-                    $this->info('Building assets...');
-                    $buildResult = Process::path($path)->timeout(300)->run('npm run build');
-
-                    $results['steps']['build'] = [
-                        'success' => $buildResult->successful(),
-                    ];
-
-                    if (! $buildResult->successful()) {
-                        $results['steps']['build']['error'] = $buildResult->errorOutput();
-                    }
-                }
-            }
-
             // Regenerate Caddy config in case anything changed
             $caddy->generate();
             $caddy->reload();
@@ -150,6 +161,60 @@ final class ProjectUpdateCommand extends Command
         } catch (\Throwable $e) {
             return $this->failWithMessage($e->getMessage());
         }
+    }
+
+    /**
+     * Detect which package manager to use based on lock files.
+     */
+    private function detectPackageManager(string $path): string
+    {
+        if (file_exists("{$path}/bun.lock") || file_exists("{$path}/bun.lockb")) {
+            return 'bun';
+        }
+
+        if (file_exists("{$path}/pnpm-lock.yaml")) {
+            return 'pnpm';
+        }
+
+        if (file_exists("{$path}/yarn.lock")) {
+            return 'yarn';
+        }
+
+        return 'npm';
+    }
+
+    /**
+     * Get the install command for the given package manager.
+     */
+    private function getInstallCommand(string $packageManager): string
+    {
+        $home = $_SERVER['HOME'];
+
+        return match ($packageManager) {
+            'bun' => file_exists("{$home}/.bun/bin/bun")
+                ? "{$home}/.bun/bin/bun install"
+                : 'bun install',
+            'pnpm' => 'pnpm install',
+            'yarn' => 'yarn install',
+            default => 'npm install',
+        };
+    }
+
+    /**
+     * Get the build command for the given package manager.
+     */
+    private function getBuildCommand(string $packageManager): string
+    {
+        $home = $_SERVER['HOME'];
+
+        return match ($packageManager) {
+            'bun' => file_exists("{$home}/.bun/bin/bun")
+                ? "{$home}/.bun/bin/bun run build"
+                : 'bun run build',
+            'pnpm' => 'pnpm run build',
+            'yarn' => 'yarn run build',
+            default => 'npm run build',
+        };
     }
 
     private function resolvePathFromSite(ConfigManager $config, string $site): ?string
