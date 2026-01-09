@@ -90,7 +90,10 @@ class InitCommand extends Command
         // 5. Create docker network
         $this->task('Creating Docker network', $dockerManager->createNetwork(...));
 
-        // 6. Build DNS container
+        // 6. Configure /etc/hosts for Redis
+        $this->task('Configuring /etc/hosts', $this->configureHosts(...));
+
+        // 7. Build DNS container
         $this->task('Building DNS container', function () use ($dockerManager) {
             $result = $dockerManager->build('dns');
             if (! $result && $dockerManager->getLastError()) {
@@ -100,7 +103,7 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 7. Build PHP images (with Redis and other extensions)
+        // 8. Build PHP images (with Redis and other extensions)
         $this->task('Building PHP images (this may take a while)', function () use ($dockerManager) {
             $result = $dockerManager->build('php');
             if (! $result && $dockerManager->getLastError()) {
@@ -110,7 +113,7 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 8. Pull service images
+        // 9. Pull service images
         $this->task('Pulling Caddy image', function () use ($dockerManager) {
             $result = $dockerManager->pull('caddy');
             if (! $result && $dockerManager->getLastError()) {
@@ -147,14 +150,14 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 9. Install composer-link globally for package development
+        // 10. Install composer-link globally for package development
         $this->task('Installing composer-link plugin', function () {
             $result = Process::run('composer global config --no-plugins allow-plugins.sandersander/composer-link true && composer global require sandersander/composer-link --quiet');
 
             return $result->successful();
         });
 
-        // 10. Install cron job for ensure command
+        // 11. Install cron job for ensure command
         $this->task('Installing cron job', $this->installCronJob(...));
 
         $this->newLine();
@@ -348,6 +351,24 @@ ENV;
 
         // Install new crontab
         $result = Process::run("echo \"{$newCrontab}\" | crontab -");
+
+        return $result->successful();
+    }
+
+    protected function configureHosts(): bool
+    {
+        $hostsEntry = '127.0.0.1 launchpad-redis';
+        $hostsFile = '/etc/hosts';
+
+        // Check if entry already exists
+        $result = Process::run("grep -q 'launchpad-redis' {$hostsFile}");
+        if ($result->successful()) {
+            // Entry already exists
+            return true;
+        }
+
+        // Add the entry using sudo
+        $result = Process::run("echo '{$hostsEntry}' | sudo tee -a {$hostsFile} > /dev/null");
 
         return $result->successful();
     }
