@@ -22,13 +22,22 @@ class CreateProjectJob implements ShouldQueue
     /**
      * The number of seconds the job can run before timing out.
      */
-    public int $timeout = 600; // 10 minutes
+    public int $timeout = 900; // 15 minutes
 
     public function __construct(
         public string $slug,
-        public string $template,
-        public string $dbDriver,
-        public string $visibility,
+        public ?string $template = null,
+        public ?string $cloneUrl = null,
+        public bool $fork = false,
+        public string $visibility = 'private',
+        public ?string $name = null,
+        public ?string $phpVersion = null,
+        public ?string $dbDriver = null,
+        public ?string $sessionDriver = null,
+        public ?string $cacheDriver = null,
+        public ?string $queueDriver = null,
+        public ?string $path = null,
+        public bool $minimal = false,
     ) {}
 
     /**
@@ -36,41 +45,74 @@ class CreateProjectJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $launchpad = $this->findLaunchpadBinary();
+
         try {
             $this->broadcast('provisioning');
 
-            // Create GitHub repository
-            $this->broadcast('creating_repo');
-            $this->runCli("repo:create {$this->slug} --visibility={$this->visibility}");
+            // Build the provision command
+            $command = "{$launchpad} provision ".escapeshellarg($this->slug);
 
-            // Clone the repository
-            $this->broadcast('cloning');
-            $this->runCli("site:clone {$this->slug}");
+            if ($this->template) {
+                $command .= ' --template='.escapeshellarg($this->template);
+            }
 
-            // Early Caddy reload for SSL
-            $this->runCli('caddy:reload');
+            if ($this->cloneUrl) {
+                $command .= ' --clone-url='.escapeshellarg($this->cloneUrl);
+            }
 
-            // Set up the project from template
-            $this->broadcast('setting_up');
-            $this->runCli("site:setup {$this->slug} --template={$this->template} --db-driver={$this->dbDriver}");
+            if ($this->fork) {
+                $command .= ' --fork';
+            }
 
-            // Install Composer dependencies
-            $this->broadcast('installing_composer');
-            $this->runInProject('composer install --no-interaction');
+            $command .= ' --visibility='.escapeshellarg($this->visibility);
 
-            // Install NPM dependencies
-            $this->broadcast('installing_npm');
-            $this->runInProject('npm install');
+            if ($this->name && $this->name !== $this->slug) {
+                $command .= ' --name='.escapeshellarg($this->name);
+            }
 
-            // Build assets
-            $this->broadcast('building');
-            $this->runInProject('npm run build');
+            if ($this->phpVersion) {
+                $command .= ' --php='.escapeshellarg($this->phpVersion);
+            }
 
-            // Finalize
-            $this->broadcast('finalizing');
-            $this->runCli('caddy:reload');
+            if ($this->dbDriver) {
+                $command .= ' --db-driver='.escapeshellarg($this->dbDriver);
+            }
 
-            // Done
+            if ($this->sessionDriver) {
+                $command .= ' --session-driver='.escapeshellarg($this->sessionDriver);
+            }
+
+            if ($this->cacheDriver) {
+                $command .= ' --cache-driver='.escapeshellarg($this->cacheDriver);
+            }
+
+            if ($this->queueDriver) {
+                $command .= ' --queue-driver='.escapeshellarg($this->queueDriver);
+            }
+
+            if ($this->minimal) {
+                $command .= ' --minimal';
+            }
+
+            // Run the provision command
+            // The provision command handles all the steps and broadcasts status updates
+            $result = Process::timeout($this->timeout - 60)
+                ->env([
+                    'HOME' => $_SERVER['HOME'] ?? '/home/launchpad',
+                    'PATH' => ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:'.
+                              ($_SERVER['HOME'] ?? '/home/launchpad').'/.config/herd-lite/bin:'.
+                              '/usr/local/bin:/usr/bin:/bin',
+                ])
+                ->run($command);
+
+            if (! $result->successful()) {
+                throw new \RuntimeException(
+                    "Provision command failed:\n".$result->errorOutput()
+                );
+            }
+
+            // The provision command broadcasts 'ready' when done, but we ensure it here too
             $this->broadcast('ready');
 
         } catch (\Exception $e) {
@@ -88,37 +130,24 @@ class CreateProjectJob implements ShouldQueue
     }
 
     /**
-     * Run a launchpad CLI command.
+     * Find the launchpad binary.
      */
-    private function runCli(string $command): void
+    private function findLaunchpadBinary(): string
     {
-        $launchpad = $_SERVER['HOME'].'/.local/bin/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $paths = [
+            "{$home}/.local/bin/launchpad",
+            '/usr/local/bin/launchpad',
+            "{$home}/projects/launchpad-cli/launchpad",
+        ];
 
-        $result = Process::timeout(300)->run("{$launchpad} {$command}");
-
-        if (! $result->successful()) {
-            throw new \RuntimeException(
-                "CLI command failed: {$command}\n".$result->errorOutput()
-            );
+        foreach ($paths as $path) {
+            if (file_exists($path) && is_executable($path)) {
+                return $path;
+            }
         }
-    }
 
-    /**
-     * Run a command in the project directory.
-     */
-    private function runInProject(string $command): void
-    {
-        $projectPath = $_SERVER['HOME']."/projects/{$this->slug}";
-
-        $result = Process::timeout(300)
-            ->path($projectPath)
-            ->run($command);
-
-        if (! $result->successful()) {
-            throw new \RuntimeException(
-                "Command failed in project: {$command}\n".$result->errorOutput()
-            );
-        }
+        return "{$home}/.local/bin/launchpad"; // Default
     }
 
     /**
