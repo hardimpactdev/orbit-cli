@@ -37,8 +37,8 @@ it('generates docker-compose with volume mounts', function () {
     expect($compose)->toContain('image: launchpad-php:8.4');
     expect($compose)->toContain('launchpad-php-83');
     expect($compose)->toContain('launchpad-php-84');
-    expect($compose)->toContain('/home/user/Projects:/app/Projects');
-    expect($compose)->toContain('/home/user/Work:/app/Work');
+    expect($compose)->toContain('/home/user/Projects:/home/user/Projects');
+    expect($compose)->toContain('/home/user/Work:/home/user/Work');
     expect($compose)->toContain('networks:');
     expect($compose)->toContain('launchpad');
 });
@@ -55,7 +55,7 @@ it('expands tilde paths', function () {
 
     $compose = File::get($this->tempDir.'/php/docker-compose.yml');
 
-    expect($compose)->toContain('/home/testuser/Projects:/app/Projects');
+    expect($compose)->toContain('/home/testuser/Projects:/home/testuser/Projects');
 });
 
 it('generates compose with no paths', function () {

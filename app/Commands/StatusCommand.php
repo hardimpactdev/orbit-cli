@@ -69,6 +69,8 @@ class StatusCommand extends Command
                 'config_path' => $configManager->getConfigPath(),
                 'tld' => $configManager->getTld(),
                 'default_php_version' => $configManager->getDefaultPhpVersion(),
+                'cli_version' => config('app.version'),
+                'cli_path' => $_SERVER['SCRIPT_FILENAME'] ?? null,
             ]);
         }
 

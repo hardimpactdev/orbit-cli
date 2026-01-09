@@ -169,18 +169,8 @@ class CaddyfileGenerator
 
     protected function getDockerPath(string $hostPath, array $configPaths): string
     {
-        // Convert host path to docker container path
-        // ~/Projects/myapp -> /app/Projects/myapp
-        foreach ($configPaths as $configPath) {
-            $expandedConfigPath = $this->expandPath($configPath);
-            if (str_starts_with($hostPath, $expandedConfigPath)) {
-                $relativePath = substr($hostPath, strlen($expandedConfigPath));
-                $baseName = basename((string) $configPath);
-
-                return "/app/{$baseName}{$relativePath}";
-            }
-        }
-
+        // Docker mounts paths at the same location, so no conversion needed
+        // PhpComposeGenerator mounts {expandedPath}:{expandedPath}
         return $hostPath;
     }
 

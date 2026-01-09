@@ -20,6 +20,7 @@ class PhpComposeGenerator
         $worktreeMount = $this->generateWorktreeMount();
         $vibeKanbanMount = $this->generateVibeKanbanMount();
         $launchpadWebMount = $this->generateLaunchpadWebMount();
+        $configMount = $this->generateConfigMount();
 
         $healthcheck = $this->generateHealthcheck();
 
@@ -33,7 +34,8 @@ class PhpComposeGenerator
     ports:
       - \"8083:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -48,7 +50,8 @@ class PhpComposeGenerator
     ports:
       - \"8084:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -63,7 +66,8 @@ class PhpComposeGenerator
     ports:
       - \"8085:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+      - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
@@ -82,7 +86,7 @@ networks:
         $mounts = '';
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
-            $containerPath = '/app/'.basename((string) $path);
+            $containerPath = $expandedPath;
             $mounts .= "      - {$expandedPath}:{$containerPath}\n";
         }
 
@@ -122,6 +126,19 @@ networks:
 
         if (File::isDirectory($webAppPath)) {
             return "      - {$webAppPath}:/launchpad-web\n";
+        }
+
+        return '';
+    }
+
+    protected function generateConfigMount(): string
+    {
+        // Mount the launchpad config directory to /root/.config/launchpad
+        // This allows the CLI web app (running as root in FrankenPHP) to read the config
+        $configPath = $this->configManager->getConfigPath();
+
+        if (File::isDirectory($configPath)) {
+            return "      - {$configPath}:/root/.config/launchpad:ro\n";
         }
 
         return '';
