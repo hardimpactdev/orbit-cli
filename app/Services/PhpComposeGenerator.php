@@ -133,12 +133,12 @@ networks:
 
     protected function generateConfigMount(): string
     {
-        // Mount the launchpad config directory to /root/.config/launchpad
-        // This allows the CLI web app (running as root in FrankenPHP) to read the config
+        // Mount the launchpad config directory to /home/launchpad/.config/launchpad
+        // This allows the CLI web app (running as launchpad user in FrankenPHP) to read the config
         $configPath = $this->configManager->getConfigPath();
 
         if (File::isDirectory($configPath)) {
-            return "      - {$configPath}:/root/.config/launchpad:ro\n";
+            return "      - {$configPath}:/home/launchpad/.config/launchpad:ro\n";
         }
 
         return '';
