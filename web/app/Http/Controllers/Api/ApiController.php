@@ -68,7 +68,7 @@ class ApiController extends Controller
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
         $paths = [
             // Container paths
-            '/app/projects/launchpad-cli/launchpad',
+            '/usr/local/bin/launchpad',
             // Host paths
             "{$home}/.local/bin/launchpad",
             '/usr/local/bin/launchpad',
@@ -81,7 +81,7 @@ class ApiController extends Controller
             }
         }
 
-        return '/app/projects/launchpad-cli/launchpad';
+        return '/usr/local/bin/launchpad';
     }
 
     // ===== Status & Info =====
