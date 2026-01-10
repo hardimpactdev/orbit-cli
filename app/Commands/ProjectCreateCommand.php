@@ -7,6 +7,7 @@ namespace App\Commands;
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use App\Services\ConfigManager;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
 
@@ -29,7 +30,7 @@ final class ProjectCreateCommand extends Command
         {--minimal : Only run composer install, skip npm/build/env/migrations}
         {--json : Output as JSON}';
 
-    protected $description = 'Create a new project (starts provisioning in background)';
+    protected $description = 'Create a new project';
 
     public function handle(ConfigManager $config): int
     {
@@ -66,87 +67,64 @@ final class ProjectCreateCommand extends Command
             return $this->failWithMessage("Failed to create directory: {$localPath}");
         }
 
-        // Determine GitHub repo name
-        $githubRepo = null;
+        // Determine clone URL
         $cloneUrl = null;
-
-        if ($template) {
-            // Provision command will handle GitHub repo creation
-            // Just pass --template flag, provision will figure out the username
-            $githubRepo = null; // Will be determined by provision command
-        } elseif ($clone) {
-            // Clone existing repo
+        if ($clone) {
             $cloneUrl = str_starts_with($clone, 'git@') || str_starts_with($clone, 'https://')
                 ? $clone
                 : "git@github.com:{$clone}.git";
         }
 
-        // Step 2: Build provision command (use full path for nohup)
-        $launchpadBin = realpath($_SERVER['argv'][0]) ?: '/home/launchpad/projects/launchpad-cli/launchpad';
-        $provisionCmd = "HOME={$_SERVER['HOME']} {$launchpadBin} provision ".escapeshellarg($slug);
+        // Build provision command arguments
+        $provisionArgs = [
+            'slug' => $slug,
+            '--visibility' => $visibility,
+        ];
 
         if ($template) {
-            $provisionCmd .= ' --template='.escapeshellarg($template);
+            $provisionArgs['--template'] = $template;
         }
         if ($cloneUrl) {
-            $provisionCmd .= ' --clone-url='.escapeshellarg($cloneUrl);
+            $provisionArgs['--clone-url'] = $cloneUrl;
         }
-        $provisionCmd .= ' --visibility='.escapeshellarg($visibility);
-
-        // Pass original name for APP_NAME (may differ from slug)
         if ($name !== $slug) {
-            $provisionCmd .= ' --name='.escapeshellarg($name);
+            $provisionArgs['--name'] = $name;
         }
-
-        // Pass PHP version if provided
         if ($phpVersion = $this->option('php')) {
-            $provisionCmd .= ' --php='.escapeshellarg($phpVersion);
+            $provisionArgs['--php'] = $phpVersion;
         }
-
-        // Pass driver options if provided
         if ($dbDriver = $this->option('db-driver')) {
-            $provisionCmd .= ' --db-driver='.escapeshellarg($dbDriver);
+            $provisionArgs['--db-driver'] = $dbDriver;
         }
         if ($sessionDriver = $this->option('session-driver')) {
-            $provisionCmd .= ' --session-driver='.escapeshellarg($sessionDriver);
+            $provisionArgs['--session-driver'] = $sessionDriver;
         }
         if ($cacheDriver = $this->option('cache-driver')) {
-            $provisionCmd .= ' --cache-driver='.escapeshellarg($cacheDriver);
+            $provisionArgs['--cache-driver'] = $cacheDriver;
         }
         if ($queueDriver = $this->option('queue-driver')) {
-            $provisionCmd .= ' --queue-driver='.escapeshellarg($queueDriver);
+            $provisionArgs['--queue-driver'] = $queueDriver;
         }
-
-        // Minimal mode: only composer install
         if ($this->option('minimal')) {
-            $provisionCmd .= ' --minimal';
+            $provisionArgs['--minimal'] = true;
         }
-
-        // Fork mode: fork instead of import
         if ($this->option('fork')) {
-            $provisionCmd .= ' --fork';
+            $provisionArgs['--fork'] = true;
+        }
+        if ($this->wantsJson()) {
+            $provisionArgs['--json'] = true;
         }
 
-        // Step 3: Start background process via at (only method that returns immediately over SSH)
-        $logFile = "/tmp/provision-{$slug}.log";
-        $scriptFile = "/tmp/provision-{$slug}.sh";
+        // Run provision command synchronously
+        $exitCode = Artisan::call('provision', $provisionArgs, $this->output);
 
-        // Write launcher script with explicit PATH (at runs with minimal env)
-        $pathExport = 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin"';
-        file_put_contents($scriptFile, "#!/bin/bash\n{$pathExport}\n{$provisionCmd} > {$logFile} 2>&1\n");
-        chmod($scriptFile, 0755);
+        if ($exitCode !== 0) {
+            // Cleanup the directory we created
+            if (is_dir($localPath) && ! glob("{$localPath}/*")) {
+                rmdir($localPath);
+            }
 
-        // Use at now - only method that fully detaches from PHP/SSH session
-        exec("echo {$scriptFile} | at now 2>/dev/null");
-
-        // Only show info messages if not JSON mode
-        if (! $this->wantsJson()) {
-            $this->info("Project creation started: {$name}");
-            $this->info("  Directory: {$localPath}");
-            $this->info("  Log file: {$logFile}");
-            $this->info('');
-            $this->info('Provisioning in background. Monitor with:');
-            $this->info("  tail -f {$logFile}");
+            return $exitCode;
         }
 
         return $this->outputJsonSuccess([
@@ -154,9 +132,7 @@ final class ProjectCreateCommand extends Command
             'slug' => $slug,
             'project_slug' => $slug,
             'local_path' => $localPath,
-            'status' => 'provisioning',
-            'log_file' => $logFile,
-            'github_repo' => $githubRepo,
+            'status' => 'ready',
         ]);
     }
 

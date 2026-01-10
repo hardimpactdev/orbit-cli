@@ -199,7 +199,7 @@ final class ProvisionCommand extends Command
 
         } catch (\Throwable $e) {
             $this->error('Provisioning failed: '.$e->getMessage());
-            $this->log('ERROR: Provisioning failed: ' . $e->getMessage());
+            $this->log('ERROR: Provisioning failed: '.$e->getMessage());
             $this->broadcast('failed', $e->getMessage());
 
             throw new \RuntimeException('Provisioning failed');
@@ -502,6 +502,16 @@ final class ProvisionCommand extends Command
                 $error = trim($keyResult->errorOutput() ?: $keyResult->output());
                 throw new \RuntimeException("key:generate failed: {$error}");
             }
+
+            // Verify APP_KEY was actually set
+            $envContent = file_get_contents("{$this->projectPath}/.env");
+            if (preg_match('|^APP_KEY=(.*)$|m', $envContent, $matches)) {
+                if (empty(trim($matches[1]))) {
+                    throw new \RuntimeException('key:generate succeeded but APP_KEY is empty in .env');
+                }
+            } else {
+                throw new \RuntimeException('APP_KEY not found in .env after key:generate');
+            }
         }
 
         // Step 7: Run migrations
@@ -796,7 +806,7 @@ final class ProvisionCommand extends Command
 
     private function broadcast(string $status, ?string $error = null): void
     {
-        $this->log("Status: $status" . ($error ? " - Error: $error" : ""));
+        $this->log("Status: $status".($error ? " - Error: $error" : ''));
         if (! $this->broadcaster?->isEnabled()) {
             return;
         }
@@ -920,13 +930,13 @@ final class ProvisionCommand extends Command
      */
     private function initializeLog(ConfigManager $config): void
     {
-        $logsDir = $config->getConfigPath() . '/logs/provision';
+        $logsDir = $config->getConfigPath().'/logs/provision';
         if (! is_dir($logsDir)) {
             mkdir($logsDir, 0755, true);
         }
-        $this->logFile = $logsDir . '/' . $this->slug . '.log';
+        $this->logFile = $logsDir.'/'.$this->slug.'.log';
         // Clear any existing log for this slug
         file_put_contents($this->logFile, '');
-        $this->log('Provisioning started for: ' . $this->slug);
+        $this->log('Provisioning started for: '.$this->slug);
     }
 }
