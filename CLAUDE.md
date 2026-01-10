@@ -1068,3 +1068,30 @@ Existing files owned by root can be fixed with:
 ```bash
 sudo chown -R launchpad:launchpad ~/projects/*/storage
 ```
+
+### Reverb Broadcasting Configuration
+
+**The Problem:** The web app runs in two contexts that need different Reverb connections:
+1. **PHP container** - Can reach Docker network (`launchpad-reverb:6001`)
+2. **Horizon on HOST** - Can reach localhost (`127.0.0.1:6001`)
+
+Both read the same `.env` file, so we use environment variable overrides.
+
+**Solution:**
+
+1. **Web app `.env`** - Configured for Docker container:
+   ```env
+   REVERB_HOST=launchpad-reverb
+   REVERB_PORT=6001
+   REVERB_SCHEME=http
+   ```
+
+2. **Supervisord config** - Overrides for Horizon on HOST:
+   ```ini
+   # /etc/supervisor/conf.d/launchpad-horizon.conf
+   environment=...,REVERB_HOST="127.0.0.1",REVERB_PORT="6001",REVERB_SCHEME="http",...
+   ```
+
+Environment variables from supervisord override `.env` values because PHP checks actual env vars before loading `.env`.
+
+**Safety net:** Both `CreateProjectJob` and `DeleteProjectJob` wrap `event()` in try/catch to prevent broadcast failures from failing the job.
