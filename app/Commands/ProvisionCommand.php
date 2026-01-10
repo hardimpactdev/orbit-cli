@@ -32,6 +32,8 @@ final class ProvisionCommand extends Command
 
     private string $slug;
 
+    private ?string $logFile = null;
+
     private string $projectPath;
 
     private bool $aborted = false;
@@ -50,6 +52,7 @@ final class ProvisionCommand extends Command
         }
 
         $this->slug = $this->argument('slug');
+        $this->initializeLog($config);
 
         $paths = $config->getPaths();
         if (empty($paths)) {
@@ -196,6 +199,7 @@ final class ProvisionCommand extends Command
 
         } catch (\Throwable $e) {
             $this->error('Provisioning failed: '.$e->getMessage());
+            $this->log('ERROR: Provisioning failed: ' . $e->getMessage());
             $this->broadcast('failed', $e->getMessage());
 
             throw new \RuntimeException('Provisioning failed');
@@ -495,14 +499,26 @@ final class ProvisionCommand extends Command
                 ])
                 ->run('php artisan key:generate --force');
             if (! $keyResult->successful()) {
-                $this->warn('  Warning: key:generate may have failed');
+                $error = trim($keyResult->errorOutput() ?: $keyResult->output());
+                throw new \RuntimeException("key:generate failed: {$error}");
             }
         }
 
         // Step 7: Run migrations
         if (file_exists("{$this->projectPath}/artisan")) {
             $this->info('  Running migrations...');
-            Process::path($this->projectPath)->timeout(120)->run('php artisan migrate --force');
+            $migrateResult = Process::path($this->projectPath)
+                ->env([
+                    'HOME' => $_SERVER['HOME'] ?? '/home/launchpad',
+                    'PATH' => ($_SERVER['HOME'] ?? '/home/launchpad').'/.config/herd-lite/bin:'.
+                              ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:/usr/local/bin:/usr/bin:/bin',
+                ])
+                ->timeout(120)
+                ->run('php artisan migrate --force');
+            if (! $migrateResult->successful()) {
+                $error = trim($migrateResult->errorOutput() ?: $migrateResult->output());
+                throw new \RuntimeException("migrate failed: {$error}");
+            }
         }
 
         // Step 8: Run composer scripts (like post-install-cmd) if they exist
@@ -780,6 +796,7 @@ final class ProvisionCommand extends Command
 
     private function broadcast(string $status, ?string $error = null): void
     {
+        $this->log("Status: $status" . ($error ? " - Error: $error" : ""));
         if (! $this->broadcaster?->isEnabled()) {
             return;
         }
@@ -885,5 +902,31 @@ final class ProvisionCommand extends Command
         $this->error("Aborting: {$reason}");
         $this->broadcast('failed', $reason);
         exit(1);
+    }
+
+    /**
+     * Write a message to the provision log file.
+     */
+    private function log(string $message): void
+    {
+        if ($this->logFile !== null) {
+            $timestamp = date('Y-m-d H:i:s');
+            file_put_contents($this->logFile, "[{$timestamp}] {$message}\n", FILE_APPEND);
+        }
+    }
+
+    /**
+     * Initialize the provision log file.
+     */
+    private function initializeLog(ConfigManager $config): void
+    {
+        $logsDir = $config->getConfigPath() . '/logs/provision';
+        if (! is_dir($logsDir)) {
+            mkdir($logsDir, 0755, true);
+        }
+        $this->logFile = $logsDir . '/' . $this->slug . '.log';
+        // Clear any existing log for this slug
+        file_put_contents($this->logFile, '');
+        $this->log('Provisioning started for: ' . $this->slug);
     }
 }
