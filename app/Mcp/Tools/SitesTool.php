@@ -35,16 +35,14 @@ final class SitesTool extends Tool
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
         $projects = $this->siteScanner->scanSites();
 
-        $sites = array_map(function ($project) use ($defaultPhp) {
-            return [
-                'name' => $project['name'],
-                'domain' => $project['domain'] ?? null,
-                'path' => $project['path'],
-                'php_version' => $project['php_version'],
-                'has_custom_php' => $project['php_version'] !== $defaultPhp,
-                'secure' => $project['secure'] ?? true,
-            ];
-        }, $projects);
+        $sites = array_map(fn ($project) => [
+            'name' => $project['name'],
+            'domain' => $project['domain'] ?? null,
+            'path' => $project['path'],
+            'php_version' => $project['php_version'],
+            'has_custom_php' => $project['php_version'] !== $defaultPhp,
+            'secure' => $project['secure'] ?? true,
+        ], $projects);
 
         return Response::structured([
             'sites' => $sites,

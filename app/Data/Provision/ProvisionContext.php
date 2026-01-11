@@ -38,4 +38,30 @@ final class ProvisionContext
             'PATH' => "{$home}/.config/herd-lite/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin",
         ];
     }
+
+    /**
+     * Get the PATH string for clean environment commands.
+     */
+    public function getCleanPath(): string
+    {
+        $home = $this->getHomeDir();
+
+        return "{$home}/.config/herd-lite/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin";
+    }
+
+    /**
+     * Wrap a command with env -i to prevent inherited environment variables
+     * from overriding the project's .env file.
+     *
+     * This is necessary because phpdotenv (used by Laravel) does NOT override
+     * existing environment variables. When running artisan commands from within
+     * Horizon, the parent process's env vars would otherwise take precedence.
+     */
+    public function wrapWithCleanEnv(string $command): string
+    {
+        $home = $this->getHomeDir();
+        $path = $this->getCleanPath();
+
+        return "env -i HOME={$home} PATH={$path} {$command}";
+    }
 }

@@ -1,0 +1,16 @@
+[Unit]
+Description=Launchpad Horizon Queue Worker
+After=network.target
+
+[Service]
+Type=simple
+User=LAUNCHPAD_USER
+Group=LAUNCHPAD_GROUP
+WorkingDirectory=LAUNCHPAD_WEB_PATH
+ExecStart=LAUNCHPAD_PHP_BIN artisan horizon
+Restart=always
+RestartSec=5
+Environment="PATH=LAUNCHPAD_ENV_PATH"
+
+[Install]
+WantedBy=multi-user.target

@@ -21,27 +21,23 @@ final readonly class RunMigrations
             return StepResult::success();
         }
 
-        // Determine PHP version for container (remove dot: 8.5 -> 85)
-        $phpVersion = $context->phpVersion ?? '8.5';
-        $containerVersion = str_replace('.', '', $phpVersion);
-        $containerName = "launchpad-php-{$containerVersion}";
-
         // Clear config cache to ensure fresh .env values are loaded
         $logger->info('Clearing config cache...');
-        $clearResult = Process::timeout(30)->run(
-            "docker exec {$containerName} php {$context->projectPath}/artisan config:clear"
-        );
+        $clearResult = Process::path($context->projectPath)
+            ->timeout(30)
+            ->run($context->wrapWithCleanEnv('php artisan config:clear'));
 
         if (! $clearResult->successful()) {
             $logger->warn('config:clear failed: '.$clearResult->errorOutput());
         }
 
-        $logger->info("Running database migrations via {$containerName}...");
+        $logger->info('Running database migrations...');
 
-        // Run migrations through the PHP container so it can access launchpad-postgres
-        $result = Process::timeout(120)->run(
-            "docker exec {$containerName} php {$context->projectPath}/artisan migrate --force"
-        );
+        // Use env -i to prevent inherited environment variables from overriding
+        // the project's .env file (phpdotenv doesn't override existing env vars)
+        $result = Process::path($context->projectPath)
+            ->timeout(120)
+            ->run($context->wrapWithCleanEnv('php artisan migrate --force'));
 
         $output = trim($result->output());
         $errorOutput = trim($result->errorOutput());

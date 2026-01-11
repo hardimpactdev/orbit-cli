@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Services\DockerManager;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
@@ -9,15 +10,14 @@ class TrustCommand extends Command
 {
     protected $signature = 'trust';
 
-    protected $description = 'Install Caddy\'s root CA certificate to trust local HTTPS certificates';
+    protected $description = "Install Caddy's root CA certificate to trust local HTTPS certificates";
 
-    public function handle(): int
+    public function handle(DockerManager $dockerManager): int
     {
         $this->info('Installing Caddy root CA certificate...');
 
-        // Check if Caddy container is running
-        $result = Process::run('docker ps -q -f name=launchpad-caddy');
-        if (empty(trim($result->output()))) {
+        // Check if Caddy container is running (uses batched cache if available)
+        if (! $dockerManager->isRunning('launchpad-caddy')) {
             $this->error('Caddy container is not running. Run: launchpad start');
 
             return self::FAILURE;

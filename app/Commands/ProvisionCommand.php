@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands;
 
 use App\Actions\Provision\BuildAssets;
+use App\Actions\Provision\CheckRepoAvailable;
 use App\Actions\Provision\CloneRepository;
 use App\Actions\Provision\ConfigureEnvironment;
 use App\Actions\Provision\ConfigureTrustedProxies;
@@ -77,6 +78,12 @@ final class ProvisionCommand extends Command
         );
 
         $this->logger->broadcast('provisioning');
+
+        // Safeguard: Check target repo is available before proceeding
+        $repoCheck = app(CheckRepoAvailable::class)->handle($context, $this->logger, $config);
+        if ($repoCheck->isFailed()) {
+            throw new \RuntimeException($repoCheck->error);
+        }
 
         try {
             // Phase 1: Repository Operations

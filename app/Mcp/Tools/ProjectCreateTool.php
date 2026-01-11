@@ -38,13 +38,13 @@ class ProjectCreateTool extends Tool
         }
 
         // Build the command
-        $command = 'launchpad project:create '.escapeshellarg($name);
+        $command = 'launchpad project:create '.escapeshellarg((string) $name);
 
         if ($template) {
-            $command .= ' --template='.escapeshellarg($template);
+            $command .= ' --template='.escapeshellarg((string) $template);
         }
 
-        $command .= ' --visibility='.escapeshellarg($visibility);
+        $command .= ' --visibility='.escapeshellarg((string) $visibility);
         $command .= ' --json';
 
         // Execute the command

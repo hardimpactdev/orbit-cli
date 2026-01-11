@@ -134,7 +134,7 @@ class PhpTool extends Tool
         // Try to find in scan paths
         $paths = $this->configManager->getPaths();
         foreach ($paths as $basePath) {
-            $sitePath = rtrim($basePath, '/').'/'.$site;
+            $sitePath = rtrim((string) $basePath, '/').'/'.$site;
             if (is_dir($sitePath)) {
                 return $sitePath;
             }

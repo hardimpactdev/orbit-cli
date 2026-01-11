@@ -3,7 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\DockerManager;
+use App\Services\HorizonManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStatusCommand extends Command
@@ -14,25 +14,42 @@ class HorizonStatusCommand extends Command
 
     protected $description = 'Check Horizon status';
 
-    public function handle(DockerManager $dockerManager): int
+    public function handle(HorizonManager $horizonManager): int
     {
-        $isRunning = $dockerManager->isRunning('launchpad-horizon');
-        $health = $dockerManager->getHealthStatus('launchpad-horizon');
+        try {
+            $isInstalled = $horizonManager->isInstalled();
+            $isRunning = $isInstalled ? $horizonManager->isRunning() : false;
 
-        if ($this->wantsJson()) {
-            return $this->outputJsonSuccess([
-                'running' => $isRunning,
-                'health' => $health,
-            ]);
+            if ($this->wantsJson()) {
+                return $this->outputJsonSuccess([
+                    'installed' => $isInstalled,
+                    'running' => $isRunning,
+                ]);
+            }
+
+            if (! $isInstalled) {
+                $this->warn('Horizon service is not installed');
+                $this->info('Run: launchpad horizon:install');
+
+                return self::SUCCESS;
+            }
+
+            if ($isRunning) {
+                $this->info('Horizon is running');
+            } else {
+                $this->warn('Horizon is not running');
+                $this->info('Run: launchpad horizon:start');
+            }
+
+            return self::SUCCESS;
+        } catch (\RuntimeException $e) {
+            if ($this->wantsJson()) {
+                return $this->outputJsonError($e->getMessage());
+            }
+
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
-
-        if ($isRunning) {
-            $healthStatus = $health ? " ({$health})" : '';
-            $this->info("Horizon is running{$healthStatus}");
-        } else {
-            $this->warn('Horizon is not running');
-        }
-
-        return self::SUCCESS;
     }
 }

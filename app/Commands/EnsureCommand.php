@@ -16,12 +16,14 @@ class EnsureCommand extends Command
 
     protected $description = 'Ensure all Launchpad services are running (containers + Horizon)';
 
-    protected array $requiredContainers = [
-        'launchpad-dns',
-        'launchpad-caddy',
-        'launchpad-redis',
-        'launchpad-reverb',
-        'launchpad-horizon',
+    /**
+     * Required containers mapped to their service keys in DockerManager.
+     */
+    protected array $requiredServices = [
+        'dns',
+        'caddy',
+        'redis',
+        'reverb',
     ];
 
     public function handle(
@@ -42,10 +44,12 @@ class EnsureCommand extends Command
         }
         $results['docker'] = true;
 
-        // 2. Ensure containers are running (includes Horizon)
+        // 2. Ensure containers are running - single batched query
+        $allStatuses = $dockerManager->getAllStatuses();
         $allRunning = true;
-        foreach ($this->requiredContainers as $container) {
-            if (! $dockerManager->isRunning($container)) {
+
+        foreach ($this->requiredServices as $service) {
+            if (! isset($allStatuses[$service]) || ! $allStatuses[$service]['running']) {
                 $allRunning = false;
                 break;
             }
@@ -54,10 +58,15 @@ class EnsureCommand extends Command
         if (! $allRunning) {
             $this->logOrOutput('Starting containers...', 'info');
             $this->call('start');
+            $dockerManager->clearStatusCache(); // Clear cache after starting
         }
         $results['containers'] = true;
 
         // 3. Verify Horizon container is running
+        // Check fresh status after potential start
+        $freshStatuses = $dockerManager->getAllStatuses();
+
+        // Horizon is not in the standard CONTAINERS list, check directly
         if ($dockerManager->isRunning('launchpad-horizon')) {
             $results['horizon'] = true;
         } else {

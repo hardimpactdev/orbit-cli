@@ -248,13 +248,13 @@ if ($urlResponse['code'] === 200) {
     echo "  OK - HTTP 200 from {$urlResponse['url']}\n\n";
 } elseif ($urlResponse['code'] === 500) {
     echo "  FAIL: HTTP 500 (server error) from {$urlResponse['url']}\n\n";
-    $errors[] = "Project URL returned HTTP 500";
+    $errors[] = 'Project URL returned HTTP 500';
 } elseif ($urlResponse['code'] === 0) {
     echo "  FAIL: Could not connect to {$urlResponse['url']}\n\n";
-    $errors[] = "Could not connect to project URL";
+    $errors[] = 'Could not connect to project URL';
 } elseif ($urlResponse['code'] === 404) {
     echo "  FAIL: HTTP 404 - Site not found in Caddy\n\n";
-    $errors[] = "Project URL returned HTTP 404";
+    $errors[] = 'Project URL returned HTTP 404';
 } else {
     echo "  WARN: HTTP {$urlResponse['code']} from {$urlResponse['url']}\n\n";
 }
@@ -274,7 +274,7 @@ if (! $logCheck['exists']) {
         echo "    [{$err['level']}] {$err['message']}\n";
     }
     if ($errorCount > 3) {
-        echo "    ... and ".($errorCount - 3)." more\n";
+        echo '    ... and '.($errorCount - 3)." more\n";
     }
     echo "\n";
     $errors[] = "Laravel log contains {$errorCount} error(s)";
@@ -328,9 +328,9 @@ if (! $keepProject) {
 echo "[9/9] Results Summary\n";
 echo "=====================================\n";
 echo 'Provision: '.implode(' -> ', $provisionEvents)."\n";
-echo "Database:  ".(empty($dbCheck['missing']) && !isset($dbCheck['error']) ? 'OK' : 'FAILED')."\n";
+echo 'Database:  '.(empty($dbCheck['missing']) && ! isset($dbCheck['error']) ? 'OK' : 'FAILED')."\n";
 echo "URL Test:  HTTP {$urlResponse['code']}\n";
-echo "Log Check: ".(empty($logCheck['errors']) ? 'OK' : count($logCheck['errors']).' errors')."\n";
+echo 'Log Check: '.(empty($logCheck['errors']) ? 'OK' : count($logCheck['errors']).' errors')."\n";
 if (! $keepProject) {
     echo 'Deletion:  '.implode(' -> ', $deletionEvents)."\n";
 }

@@ -3,7 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\DockerManager;
+use App\Services\HorizonManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStopCommand extends Command
@@ -14,39 +14,59 @@ class HorizonStopCommand extends Command
 
     protected $description = 'Stop Horizon queue worker';
 
-    public function handle(DockerManager $dockerManager): int
+    public function handle(HorizonManager $horizonManager): int
     {
-        // Check if not running
-        if (! $dockerManager->isRunning('launchpad-horizon')) {
+        try {
+            if (! $horizonManager->isInstalled()) {
+                if ($this->wantsJson()) {
+                    return $this->outputJsonError('Horizon service is not installed');
+                }
+
+                $this->info('Horizon service is not installed.');
+
+                return self::SUCCESS;
+            }
+
+            // Check if not running
+            if (! $horizonManager->isRunning()) {
+                if ($this->wantsJson()) {
+                    return $this->outputJsonSuccess([
+                        'stopped' => true,
+                        'was_running' => false,
+                    ]);
+                }
+                $this->info('Horizon is not running.');
+
+                return self::SUCCESS;
+            }
+
+            // Stop the service
+            $result = $horizonManager->stop();
+
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
-                    'stopped' => true,
-                    'was_running' => false,
+                    'stopped' => $result,
+                    'was_running' => true,
                 ]);
             }
-            $this->info('Horizon is not running.');
 
-            return self::SUCCESS;
+            if ($result) {
+                $this->info('Horizon stopped successfully.');
+
+                return self::SUCCESS;
+            }
+
+            $this->error('Horizon failed to stop.');
+
+            return self::FAILURE;
+        } catch (\RuntimeException $e) {
+            if ($this->wantsJson()) {
+                return $this->outputJsonError($e->getMessage());
+            }
+
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
-
-        // Stop via Docker
-        $result = $dockerManager->stop('horizon');
-
-        if ($this->wantsJson()) {
-            return $this->outputJsonSuccess([
-                'stopped' => $result,
-                'was_running' => true,
-            ]);
-        }
-
-        if ($result) {
-            $this->info('Horizon stopped successfully.');
-
-            return self::SUCCESS;
-        }
-
-        $this->error('Horizon failed to stop: '.$dockerManager->getLastError());
-
-        return self::FAILURE;
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\DockerManager;
+use App\Services\HorizonManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStartCommand extends Command
@@ -14,39 +14,59 @@ class HorizonStartCommand extends Command
 
     protected $description = 'Start Horizon queue worker';
 
-    public function handle(DockerManager $dockerManager): int
+    public function handle(HorizonManager $horizonManager): int
     {
-        // Check if already running
-        if ($dockerManager->isRunning('launchpad-horizon')) {
+        try {
+            if (! $horizonManager->isInstalled()) {
+                if ($this->wantsJson()) {
+                    return $this->outputJsonError('Horizon service is not installed. Run: launchpad horizon:install');
+                }
+
+                $this->error('Horizon service is not installed. Run: launchpad horizon:install');
+
+                return self::FAILURE;
+            }
+
+            // Check if already running
+            if ($horizonManager->isRunning()) {
+                if ($this->wantsJson()) {
+                    return $this->outputJsonSuccess([
+                        'started' => false,
+                        'already_running' => true,
+                    ]);
+                }
+                $this->info('Horizon is already running.');
+
+                return self::SUCCESS;
+            }
+
+            // Start the service
+            $result = $horizonManager->start();
+
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
-                    'started' => false,
-                    'already_running' => true,
+                    'started' => $result,
+                    'already_running' => false,
                 ]);
             }
-            $this->info('Horizon is already running.');
 
-            return self::SUCCESS;
+            if ($result) {
+                $this->info('Horizon started successfully.');
+
+                return self::SUCCESS;
+            }
+
+            $this->error('Horizon failed to start.');
+
+            return self::FAILURE;
+        } catch (\RuntimeException $e) {
+            if ($this->wantsJson()) {
+                return $this->outputJsonError($e->getMessage());
+            }
+
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
-
-        // Start via Docker
-        $result = $dockerManager->start('horizon');
-
-        if ($this->wantsJson()) {
-            return $this->outputJsonSuccess([
-                'started' => $result,
-                'already_running' => false,
-            ]);
-        }
-
-        if ($result) {
-            $this->info('Horizon started successfully.');
-
-            return self::SUCCESS;
-        }
-
-        $this->error('Horizon failed to start: '.$dockerManager->getLastError());
-
-        return self::FAILURE;
     }
 }

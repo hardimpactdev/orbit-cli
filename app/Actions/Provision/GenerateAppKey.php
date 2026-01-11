@@ -28,12 +28,9 @@ final readonly class GenerateAppKey
 
         // Use env -i to clear inherited environment variables (especially APP_KEY from the phar)
         // This prevents Laravel from seeing the phar APP_KEY and refusing to write to .env
-        $home = $context->getHomeDir();
-        $command = "env -i HOME={$home} PATH={$home}/.config/herd-lite/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin php artisan key:generate --force";
-
         $result = Process::path($context->projectPath)
             ->timeout(30)
-            ->run($command);
+            ->run($context->wrapWithCleanEnv('php artisan key:generate --force'));
 
         $logger->log('key:generate output: '.trim($result->output()));
 

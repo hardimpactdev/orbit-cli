@@ -40,7 +40,7 @@ class ProjectDeleteTool extends Tool
         }
 
         // Build the command
-        $command = 'launchpad project:delete '.escapeshellarg($slug).' --force --json';
+        $command = 'launchpad project:delete '.escapeshellarg((string) $slug).' --force --json';
 
         // Execute the command
         $result = Process::timeout(120)->run($command);

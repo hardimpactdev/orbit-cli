@@ -1,0 +1,168 @@
+<?php
+
+namespace App\Commands;
+
+use App\Concerns\WithJsonOutput;
+use App\Services\CaddyManager;
+use App\Services\DockerManager;
+use App\Services\HorizonManager;
+use App\Services\PhpManager;
+use LaravelZero\Framework\Commands\Command;
+
+class MigrateToFpmCommand extends Command
+{
+    use WithJsonOutput;
+
+    protected $signature = 'migrate:to-fpm 
+        {--force : Skip confirmation prompts}
+        {--keep-containers : Keep old PHP containers after migration}
+        {--json : Output results as JSON}';
+
+    protected $description = 'Migrate from FrankenPHP containers to PHP-FPM on host';
+
+    public function handle(
+        PhpManager $phpManager,
+        CaddyManager $caddyManager,
+        HorizonManager $horizonManager,
+        DockerManager $dockerManager
+    ): int {
+        // Detect current setup
+        $usingFpm = $this->isUsingFpm($phpManager);
+        $usingFrankenPhp = $dockerManager->isRunning('launchpad-php-84')
+            || $dockerManager->isRunning('launchpad-php-83')
+            || $dockerManager->isRunning('launchpad-php-82');
+
+        if ($usingFpm && ! $usingFrankenPhp) {
+            return $this->outputResult(['success' => true, 'message' => 'Already using PHP-FPM']);
+        }
+
+        if (! $usingFrankenPhp && ! $usingFpm) {
+            // Fresh install - just use the new architecture
+            return $this->outputResult(['success' => true, 'message' => 'No existing installation detected']);
+        }
+
+        // Confirm migration
+        if (! $this->option('force') && ! $this->option('json')) {
+            if (! $this->confirm('This will migrate from FrankenPHP to PHP-FPM. Continue?')) {
+                return 0;
+            }
+        }
+
+        $this->info('Migrating from FrankenPHP to PHP-FPM...');
+
+        // 1. Stop current services
+        $this->task('Stopping current services', fn () => $this->call('stop') === 0);
+
+        // 2. Install PHP-FPM if not present
+        $this->task('Installing PHP-FPM', fn () => $this->ensurePhpInstalled($phpManager));
+
+        // 3. Configure FPM pools
+        $this->task('Configuring FPM pools', fn () => $this->configurePools($phpManager));
+
+        // 4. Install host Caddy if not present
+        $this->task('Installing Caddy', function () use ($caddyManager) {
+            if (! $caddyManager->isInstalled()) {
+                return $caddyManager->install();
+            }
+
+            return true;
+        });
+
+        // 5. Regenerate Caddyfile for FPM sockets
+        $this->task('Regenerating Caddyfile', function () {
+            // This triggers Caddyfile regeneration
+            $this->call('caddy:reload');
+
+            return true;
+        });
+
+        // 6. Setup Horizon service
+        $this->task('Installing Horizon service', fn () => $horizonManager->install());
+
+        // 7. Remove old containers (unless --keep-containers)
+        if (! $this->option('keep-containers')) {
+            $this->task('Removing old PHP containers', function () use ($dockerManager) {
+                $containers = ['launchpad-php-82', 'launchpad-php-83', 'launchpad-php-84', 'launchpad-php-85'];
+                foreach ($containers as $container) {
+                    if ($dockerManager->isRunning($container)) {
+                        $dockerManager->stop($container);
+                    }
+                    $dockerManager->removeContainer($container);
+                }
+
+                // Also remove the old Caddy container if present
+                if ($dockerManager->containerExists('launchpad-caddy')) {
+                    if ($dockerManager->isRunning('launchpad-caddy')) {
+                        $dockerManager->stop('caddy');
+                    }
+                    $dockerManager->removeContainer('launchpad-caddy');
+                }
+
+                return true;
+            });
+        }
+
+        // 8. Start new services
+        $this->task('Starting services', fn () => $this->call('start') === 0);
+
+        return $this->outputResult([
+            'success' => true,
+            'message' => 'Migration complete',
+            'data' => [
+                'php_fpm_active' => $this->isUsingFpm($phpManager),
+                'horizon_active' => $horizonManager->isRunning(),
+                'caddy_active' => $caddyManager->isRunning(),
+            ],
+        ]);
+    }
+
+    private function outputResult(array $result): int
+    {
+        if ($this->option('json')) {
+            $this->line(json_encode($result, JSON_PRETTY_PRINT));
+        } else {
+            $this->info($result['message']);
+        }
+
+        return $result['success'] ? 0 : 1;
+    }
+
+    private function isUsingFpm(PhpManager $phpManager): bool
+    {
+        // Check if any FPM socket exists
+        $versions = ['8.2', '8.3', '8.4', '8.5'];
+        foreach ($versions as $version) {
+            if (file_exists($phpManager->getSocketPath($version))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function ensurePhpInstalled(PhpManager $phpManager): bool
+    {
+        $versions = ['8.3', '8.4', '8.5'];
+        foreach ($versions as $version) {
+            if (! $phpManager->isInstalled($version)) {
+                if (! $phpManager->install($version)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private function configurePools(PhpManager $phpManager): bool
+    {
+        $versions = ['8.3', '8.4', '8.5'];
+        foreach ($versions as $version) {
+            if ($phpManager->isInstalled($version)) {
+                $phpManager->configurePool($version);
+            }
+        }
+
+        return true;
+    }
+}
