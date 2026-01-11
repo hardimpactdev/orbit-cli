@@ -274,6 +274,8 @@ The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring b
 | `launchpad-postgres` | PostgreSQL database |
 | `launchpad-redis` | Redis cache |
 | `launchpad-mailpit` | Mail catcher |
+| `launchpad-reverb` | WebSocket server (Laravel Reverb) |
+| `launchpad-horizon` | Queue worker (Laravel Horizon) |
 
 ## Prerequisites
 
@@ -284,7 +286,7 @@ The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring b
 | PHP >= 8.2 | `php.new` or Homebrew | `php.new` or apt |
 | Docker | OrbStack (recommended) or Docker Desktop | docker.io |
 | Composer | Homebrew | apt |
-| Supervisor | Homebrew | apt (for Horizon queue worker) |
+
 
 ### Optional
 
