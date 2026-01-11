@@ -163,7 +163,6 @@ class InitCommand extends Command
         });
 
         // 12. Configure supervisor for Horizon queue worker
-        $this->task('Building Horizon container', fn () => $dockerManager->build('horizon'));
 
         $this->newLine();
         $this->showCompletionMessage($platformService, $configManager);

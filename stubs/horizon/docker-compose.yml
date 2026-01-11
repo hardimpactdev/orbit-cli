@@ -1,9 +1,6 @@
 services:
   horizon:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: launchpad-horizon:latest
+    image: launchpad-php:8.4
     container_name: launchpad-horizon
     volumes:
       # Mount the web app
@@ -13,21 +10,28 @@ services:
       # Mount CLI binary
       - ${HOME}/.local/bin/launchpad:/usr/local/bin/launchpad:ro
       # Mount CLI config (needed for CLI commands)
-      - ${HOME}/.config/launchpad:/root/.config/launchpad
+      - ${HOME}/.config/launchpad:/home/launchpad/.config/launchpad
       # Mount projects directory (needed for provisioning)
-      - ${HOME}/projects:/root/projects
+      - ${HOME}/projects:/home/launchpad/projects
     environment:
-      - HOME=/root
-      - APP_ENV=production
+      - HOME=/home/launchpad
       - REDIS_HOST=launchpad-redis
       - REDIS_PORT=6379
       - REVERB_HOST=launchpad-reverb
       - REVERB_PORT=8080
       - REVERB_SCHEME=http
     working_dir: /app
+    command: php artisan horizon
+    user: launchpad
     restart: unless-stopped
     networks:
       - launchpad
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -q running || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
 networks:
   launchpad:
