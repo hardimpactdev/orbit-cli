@@ -21,7 +21,7 @@ class StopCommand extends Command
         $allSuccess = true;
 
         // Stop services in reverse order
-        $services = ['caddy', 'mailpit', 'redis', 'postgres', 'php', 'dns'];
+        $services = ['horizon', 'caddy', 'mailpit', 'redis', 'postgres', 'php', 'dns'];
 
         foreach ($services as $service) {
             $result = $this->runStep($service, "Stopping {$service}", fn () => $dockerManager->stop($service));

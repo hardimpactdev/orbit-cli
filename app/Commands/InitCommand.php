@@ -75,6 +75,7 @@ class InitCommand extends Command
                 "{$configPath}/redis",
                 "{$configPath}/redis/data",
                 "{$configPath}/mailpit",
+                "{$configPath}/horizon",
                 "{$configPath}/logs",
             ];
 
@@ -96,6 +97,7 @@ class InitCommand extends Command
             $this->copyStubDirectory("{$stubsPath}/postgres", "{$configPath}/postgres");
             $this->copyStubDirectory("{$stubsPath}/redis", "{$configPath}/redis");
             $this->copyStubDirectory("{$stubsPath}/mailpit", "{$configPath}/mailpit");
+            $this->copyStubDirectory("{$stubsPath}/horizon", "{$configPath}/horizon");
 
             // Copy config.json if it doesn't exist
             if (! File::exists("{$configPath}/config.json")) {
@@ -161,7 +163,7 @@ class InitCommand extends Command
         });
 
         // 12. Configure supervisor for Horizon queue worker
-        $this->task('Configuring supervisor for Horizon', fn () => $this->configureSupervisor($platformService, $configManager));
+        $this->task('Building Horizon container', fn () => $dockerManager->build('horizon'));
 
         $this->newLine();
         $this->showCompletionMessage($platformService, $configManager);

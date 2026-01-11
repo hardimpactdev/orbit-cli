@@ -35,7 +35,7 @@ class StartCommand extends Command
         $allSuccess = $configResult;
 
         // Start services in order
-        $services = ['dns', 'php', 'caddy', 'postgres', 'redis', 'mailpit'];
+        $services = ['dns', 'php', 'caddy', 'postgres', 'redis', 'mailpit', 'horizon'];
 
         foreach ($services as $service) {
             $result = $this->runStep($service, "Starting {$service}", fn () => $dockerManager->start($service));

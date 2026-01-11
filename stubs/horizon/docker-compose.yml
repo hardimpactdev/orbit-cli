@@ -1,0 +1,34 @@
+services:
+  horizon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: launchpad-horizon:latest
+    container_name: launchpad-horizon
+    volumes:
+      # Mount the web app
+      - ../web:/app
+      # Mount Docker socket for CLI commands
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount CLI binary
+      - ${HOME}/.local/bin/launchpad:/usr/local/bin/launchpad:ro
+      # Mount CLI config (needed for CLI commands)
+      - ${HOME}/.config/launchpad:/root/.config/launchpad
+      # Mount projects directory (needed for provisioning)
+      - ${HOME}/projects:/root/projects
+    environment:
+      - HOME=/root
+      - APP_ENV=production
+      - REDIS_HOST=launchpad-redis
+      - REDIS_PORT=6379
+      - REVERB_HOST=launchpad-reverb
+      - REVERB_PORT=8080
+      - REVERB_SCHEME=http
+    working_dir: /app
+    restart: unless-stopped
+    networks:
+      - launchpad
+
+networks:
+  launchpad:
+    external: true

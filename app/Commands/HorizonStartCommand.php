@@ -3,8 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\ConfigManager;
-use Illuminate\Support\Facades\Process;
+use App\Services\DockerManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStartCommand extends Command
@@ -15,23 +14,10 @@ class HorizonStartCommand extends Command
 
     protected $description = 'Start Horizon queue worker';
 
-    public function handle(ConfigManager $configManager): int
+    public function handle(DockerManager $dockerManager): int
     {
-        $webAppPath = $configManager->getWebAppPath();
-
-        if (! is_dir($webAppPath)) {
-            if ($this->wantsJson()) {
-                return $this->outputJsonError('Web app not installed');
-            }
-            $this->error('Launchpad web app is not installed.');
-            $this->line('Run: launchpad init');
-
-            return self::FAILURE;
-        }
-
         // Check if already running
-        $statusResult = Process::path($webAppPath)->run('php artisan horizon:status');
-        if (str_contains($statusResult->output(), 'Horizon is running')) {
+        if ($dockerManager->isRunning('launchpad-horizon')) {
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
                     'started' => false,
@@ -43,36 +29,23 @@ class HorizonStartCommand extends Command
             return self::SUCCESS;
         }
 
-        // Start Horizon in background
-        $logPath = $configManager->getConfigPath().'/logs/horizon.log';
-        $logDir = dirname($logPath);
-        if (! is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
-        }
-
-        Process::path($webAppPath)
-            ->start("php artisan horizon >> {$logPath} 2>&1");
-
-        // Wait and verify
-        sleep(3);
-
-        $verifyResult = Process::path($webAppPath)->run('php artisan horizon:status');
-        $isRunning = str_contains($verifyResult->output(), 'Horizon is running');
+        // Start via Docker
+        $result = $dockerManager->start('horizon');
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
-                'started' => $isRunning,
+                'started' => $result,
                 'already_running' => false,
             ]);
         }
 
-        if ($isRunning) {
+        if ($result) {
             $this->info('Horizon started successfully.');
 
             return self::SUCCESS;
         }
 
-        $this->error('Horizon failed to start. Check logs at: '.$logPath);
+        $this->error('Horizon failed to start: '.$dockerManager->getLastError());
 
         return self::FAILURE;
     }

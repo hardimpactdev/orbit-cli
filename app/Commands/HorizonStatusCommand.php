@@ -3,8 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\ConfigManager;
-use Illuminate\Support\Facades\Process;
+use App\Services\DockerManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStatusCommand extends Command
@@ -13,42 +12,27 @@ class HorizonStatusCommand extends Command
 
     protected $signature = 'horizon:status {--json : Output as JSON}';
 
-    protected $description = 'Check if Horizon is running';
+    protected $description = 'Check Horizon status';
 
-    public function handle(ConfigManager $configManager): int
+    public function handle(DockerManager $dockerManager): int
     {
-        $webAppPath = $configManager->getWebAppPath();
-
-        if (! is_dir($webAppPath)) {
-            if ($this->wantsJson()) {
-                return $this->outputJsonError('Web app not installed', self::FAILURE, [
-                    'running' => false,
-                    'installed' => false,
-                ]);
-            }
-            $this->error('Launchpad web app is not installed.');
-            $this->line('Run: launchpad init');
-
-            return self::FAILURE;
-        }
-
-        $result = Process::path($webAppPath)->run('php artisan horizon:status');
-        $isRunning = str_contains($result->output(), 'Horizon is running');
+        $isRunning = $dockerManager->isRunning('launchpad-horizon');
+        $health = $dockerManager->getHealthStatus('launchpad-horizon');
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
                 'running' => $isRunning,
-                'installed' => true,
-                'output' => trim($result->output()),
+                'health' => $health,
             ]);
         }
 
         if ($isRunning) {
-            $this->info('Horizon is running.');
+            $healthStatus = $health ? " ({$health})" : '';
+            $this->info("Horizon is running{$healthStatus}");
         } else {
-            $this->warn('Horizon is not running.');
+            $this->warn('Horizon is not running');
         }
 
-        return $isRunning ? self::SUCCESS : self::FAILURE;
+        return self::SUCCESS;
     }
 }

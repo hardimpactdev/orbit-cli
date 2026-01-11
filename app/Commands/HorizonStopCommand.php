@@ -3,8 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
-use App\Services\ConfigManager;
-use Illuminate\Support\Facades\Process;
+use App\Services\DockerManager;
 use LaravelZero\Framework\Commands\Command;
 
 class HorizonStopCommand extends Command
@@ -15,25 +14,13 @@ class HorizonStopCommand extends Command
 
     protected $description = 'Stop Horizon queue worker';
 
-    public function handle(ConfigManager $configManager): int
+    public function handle(DockerManager $dockerManager): int
     {
-        $webAppPath = $configManager->getWebAppPath();
-
-        if (! is_dir($webAppPath)) {
-            if ($this->wantsJson()) {
-                return $this->outputJsonError('Web app not installed');
-            }
-            $this->error('Launchpad web app is not installed.');
-
-            return self::FAILURE;
-        }
-
-        // Check if running
-        $statusResult = Process::path($webAppPath)->run('php artisan horizon:status');
-        if (! str_contains($statusResult->output(), 'Horizon is running')) {
+        // Check if not running
+        if (! $dockerManager->isRunning('launchpad-horizon')) {
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
-                    'stopped' => false,
+                    'stopped' => true,
                     'was_running' => false,
                 ]);
             }
@@ -42,31 +29,24 @@ class HorizonStopCommand extends Command
             return self::SUCCESS;
         }
 
-        // Terminate Horizon gracefully
-        $result = Process::path($webAppPath)->run('php artisan horizon:terminate');
-
-        // Wait for it to stop
-        sleep(2);
-
-        // Verify
-        $verifyResult = Process::path($webAppPath)->run('php artisan horizon:status');
-        $isStopped = ! str_contains($verifyResult->output(), 'Horizon is running');
+        // Stop via Docker
+        $result = $dockerManager->stop('horizon');
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
-                'stopped' => $isStopped,
+                'stopped' => $result,
                 'was_running' => true,
             ]);
         }
 
-        if ($isStopped) {
+        if ($result) {
             $this->info('Horizon stopped successfully.');
 
             return self::SUCCESS;
         }
 
-        $this->warn('Horizon may still be stopping...');
+        $this->error('Horizon failed to stop: '.$dockerManager->getLastError());
 
-        return self::SUCCESS;
+        return self::FAILURE;
     }
 }

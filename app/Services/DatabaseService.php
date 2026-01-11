@@ -10,14 +10,19 @@ class DatabaseService
 
     protected string $dbPath;
 
-    public function __construct()
+    public function __construct(?string $dbPath = null)
     {
-        $this->dbPath = $this->getDbPath();
+        $this->dbPath = $dbPath ?? $this->getDefaultDbPath();
         $this->initDatabase();
     }
 
-    protected function getDbPath(): string
+    protected function getDefaultDbPath(): string
     {
+        // Allow override via environment variable for testing
+        if ($testDbPath = getenv('LAUNCHPAD_TEST_DB')) {
+            return $testDbPath;
+        }
+
         $home = $_SERVER['HOME'] ?? getenv('HOME') ?: '/tmp';
 
         return "{$home}/.config/launchpad/database.sqlite";
@@ -113,5 +118,25 @@ class DatabaseService
         $override = $this->getProjectOverride($slug);
 
         return $override['php_version'] ?? null;
+    }
+
+    /**
+     * Get the database path (useful for testing).
+     */
+    public function getDbPath(): string
+    {
+        return $this->dbPath;
+    }
+
+    /**
+     * Clear all data from the database (useful for testing).
+     */
+    public function truncate(): void
+    {
+        if ($this->db === null) {
+            return;
+        }
+
+        $this->db->exec('DELETE FROM projects');
     }
 }

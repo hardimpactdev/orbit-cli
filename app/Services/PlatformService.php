@@ -619,7 +619,8 @@ CONF;
             'name' => 'Supervisor',
             'installed' => $this->hasSupervisor(),
             'version' => null,
-            'required' => 'For Horizon queue worker',
+            'required' => 'For Horizon queue worker (optional - launchpad uses Docker)',
+            'optional' => true,
             'installable' => $this->getPackageManager() !== null,
         ];
 

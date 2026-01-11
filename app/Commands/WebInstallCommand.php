@@ -69,7 +69,7 @@ class WebInstallCommand extends Command
         $this->info('');
         $this->info('To complete setup:');
         $this->info('  1. Restart launchpad: launchpad restart');
-        $this->info('  2. Horizon will start automatically via cron');
+        $this->info('  2. Horizon will start with other services');
         $tld = $configManager->getTld();
         $this->info("  3. Access at: https://launchpad.{$tld}");
 
