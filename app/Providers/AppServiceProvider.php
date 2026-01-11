@@ -12,7 +12,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Load MCP routes for AI tool integration
+        if (file_exists($aiRoutes = base_path('routes/ai.php'))) {
+            require $aiRoutes;
+        }
     }
 
     /**

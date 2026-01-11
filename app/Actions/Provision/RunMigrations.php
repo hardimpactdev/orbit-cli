@@ -21,9 +21,10 @@ final readonly class RunMigrations
             return StepResult::success();
         }
 
-        // Determine PHP version for container
+        // Determine PHP version for container (remove dot: 8.5 -> 85)
         $phpVersion = $context->phpVersion ?? '8.5';
-        $containerName = "launchpad-php-{$phpVersion}";
+        $containerVersion = str_replace('.', '', $phpVersion);
+        $containerName = "launchpad-php-{$containerVersion}";
 
         // Clear config cache to ensure fresh .env values are loaded
         $logger->info('Clearing config cache...');
