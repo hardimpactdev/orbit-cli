@@ -69,7 +69,7 @@ describe('StatusTool', function () {
 
 describe('StartTool', function () {
     it('starts services and returns success', function () {
-        $this->dockerManager->shouldReceive('startServices')->once()->andReturn(true);
+        $this->dockerManager->shouldReceive('startAll')->once();
 
         $tool = app(StartTool::class);
         $request = new Request([]);
@@ -89,7 +89,7 @@ describe('StartTool', function () {
 
 describe('StopTool', function () {
     it('stops services and returns success', function () {
-        $this->dockerManager->shouldReceive('stopServices')->once()->andReturn(true);
+        $this->dockerManager->shouldReceive('stopAll')->once();
 
         $tool = app(StopTool::class);
         $request = new Request([]);
@@ -101,8 +101,8 @@ describe('StopTool', function () {
 
 describe('RestartTool', function () {
     it('restarts services and returns success', function () {
-        $this->dockerManager->shouldReceive('stopServices')->once()->andReturn(true);
-        $this->dockerManager->shouldReceive('startServices')->once()->andReturn(true);
+        $this->dockerManager->shouldReceive('stopAll')->once();
+        $this->dockerManager->shouldReceive('startAll')->once();
 
         $tool = app(RestartTool::class);
         $request = new Request([]);

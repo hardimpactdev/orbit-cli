@@ -6,8 +6,11 @@
  * This test replicates the desktop app workflow:
  * 1. Create a project via API (dispatches CreateProjectJob)
  * 2. Track provisioning status via log files until "ready"
- * 3. Delete the project via API (dispatches DeleteProjectJob)
- * 4. Track deletion status via log files until "deleted"
+ * 3. Validate migrations ran (check database tables)
+ * 4. Visit the project URL and verify it loads
+ * 5. Check Laravel logs for errors
+ * 6. Delete the project via API (dispatches DeleteProjectJob)
+ * 7. Track deletion status via log files until "deleted"
  *
  * The test validates that all expected status broadcasts are sent.
  * Note: This reads from CLI log files as a proxy for WebSocket broadcasts.
@@ -51,7 +54,7 @@ $pusher = new Pusher\Pusher(
     ['host' => "reverb.{$tld}", 'port' => 443, 'scheme' => 'https', 'useTLS' => true, 'cluster' => 'mt1']
 );
 
-echo "[1/6] Testing Reverb connection...\n";
+echo "[1/9] Testing Reverb connection...\n";
 try {
     $pusher->getChannels();
     echo "  OK - Reverb is accessible\n\n";
@@ -64,13 +67,14 @@ try {
 /**
  * Make HTTP request to the API
  */
-function httpRequest(string $method, string $url, array $data = []): array
+function httpRequest(string $method, string $url, array $data = [], array $options = []): array
 {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $options['timeout'] ?? 30);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
@@ -83,8 +87,15 @@ function httpRequest(string $method, string $url, array $data = []): array
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    
 
-    return ['code' => $httpCode, 'body' => json_decode($response, true) ?? ['raw' => $response]];
+    return [
+        'code' => $httpCode,
+        'body' => json_decode($response, true) ?? ['raw' => $response],
+        'raw' => $response,
+        'error' => $error,
+    ];
 }
 
 /**
@@ -107,12 +118,70 @@ function getLoggedStatuses(string $slug, string $type): array
     return $matches[1] ?? [];
 }
 
+/**
+ * Check if required database tables exist
+ */
+function checkDatabaseTables(string $slug): array
+{
+    $requiredTables = ['users', 'sessions', 'migrations', 'jobs', 'password_reset_tokens'];
+    $missing = [];
+
+    $output = shell_exec("docker exec launchpad-postgres psql -U launchpad -d {$slug} -tAc \"SELECT tablename FROM pg_tables WHERE schemaname = 'public'\" 2>&1");
+
+    if (strpos($output, 'does not exist') !== false) {
+        return ['error' => 'Database does not exist'];
+    }
+
+    $tables = array_filter(array_map('trim', explode("\n", $output)));
+
+    foreach ($requiredTables as $table) {
+        if (! in_array($table, $tables)) {
+            $missing[] = $table;
+        }
+    }
+
+    return ['tables' => $tables, 'missing' => $missing];
+}
+
+/**
+ * Check Laravel logs for errors
+ */
+function checkLaravelLogs(string $slug): array
+{
+    $home = $_SERVER['HOME'] ?? '/home/launchpad';
+    $logFile = "{$home}/projects/{$slug}/storage/logs/laravel.log";
+    $errors = [];
+
+    if (! file_exists($logFile)) {
+        return ['exists' => false, 'errors' => []];
+    }
+
+    $content = file_get_contents($logFile);
+
+    // Look for ERROR or CRITICAL level logs
+    preg_match_all('/\[\d{4}-\d{2}-\d{2}[^\]]+\] \w+\.(ERROR|CRITICAL): (.+?)(?=\[\d{4}-\d{2}-\d{2}|\z)/s', $content, $matches, PREG_SET_ORDER);
+
+    foreach ($matches as $match) {
+        $errors[] = [
+            'level' => $match[1],
+            'message' => trim(substr($match[2], 0, 200)),
+        ];
+    }
+
+    return ['exists' => true, 'errors' => $errors, 'size' => strlen($content)];
+}
+
 // Step 2: Create project
-echo "[2/6] Creating project via API...\n";
+echo "[2/9] Creating project via API...\n";
 $createResponse = httpRequest('POST', "{$apiBase}/projects", [
     'name' => $slug,
     'template' => 'hardimpactdev/liftoff-starterkit',
     'visibility' => 'private',
+    'php_version' => '8.5',
+    'db_driver' => 'pgsql',
+    'session_driver' => 'database',
+    'cache_driver' => 'redis',
+    'queue_driver' => 'redis',
 ]);
 
 if ($createResponse['code'] !== 202) {
@@ -123,7 +192,7 @@ if ($createResponse['code'] !== 202) {
 echo "  OK - HTTP 202 Accepted\n\n";
 
 // Step 3: Wait for provisioning
-echo "[3/6] Waiting for provisioning (~30-60 seconds)...\n";
+echo "[3/9] Waiting for provisioning (~30-60 seconds)...\n";
 $timeout = 120;
 $start = time();
 $lastStatus = null;
@@ -151,9 +220,63 @@ if ($lastStatus === 'ready') {
     $errors[] = "Provisioning stuck on: {$lastStatus}";
 }
 
-// Step 4-5: Delete project (unless --keep)
+// Step 4: Validate database tables
+echo "[4/9] Validating database migrations...\n";
+$dbCheck = checkDatabaseTables($slug);
+
+if (isset($dbCheck['error'])) {
+    echo "  FAIL: {$dbCheck['error']}\n\n";
+    $errors[] = "Database: {$dbCheck['error']}";
+} elseif (! empty($dbCheck['missing'])) {
+    echo '  FAIL: Missing tables: '.implode(', ', $dbCheck['missing'])."\n\n";
+    $errors[] = 'Missing tables: '.implode(', ', $dbCheck['missing']);
+} else {
+    echo '  OK - All required tables exist ('.count($dbCheck['tables'])." tables)\n";
+    echo '  Tables: '.implode(', ', $dbCheck['tables'])."\n\n";
+}
+
+// Step 5: Visit the project URL
+echo "[5/9] Visiting project URL...\n";
+$projectUrl = "https://{$slug}.{$tld}/";
+$urlResponse = httpRequest('GET', $projectUrl, [], ['timeout' => 10]);
+
+if ($urlResponse['code'] === 200) {
+    echo "  OK - HTTP 200 from {$projectUrl}\n\n";
+} elseif ($urlResponse['code'] === 500) {
+    echo "  FAIL: HTTP 500 (server error) from {$projectUrl}\n\n";
+    $errors[] = "Project URL returned HTTP 500";
+} elseif ($urlResponse['code'] === 0) {
+    echo "  FAIL: Could not connect to {$projectUrl}\n";
+    echo "  Error: {$urlResponse['error']}\n\n";
+    $errors[] = "Could not connect to project URL";
+} else {
+    echo "  WARN: HTTP {$urlResponse['code']} from {$projectUrl}\n\n";
+}
+
+// Step 6: Check Laravel logs for errors
+echo "[6/9] Checking Laravel logs for errors...\n";
+$logCheck = checkLaravelLogs($slug);
+
+if (! $logCheck['exists']) {
+    echo "  OK - No log file yet (clean install)\n\n";
+} elseif (empty($logCheck['errors'])) {
+    echo "  OK - No errors in Laravel log ({$logCheck['size']} bytes)\n\n";
+} else {
+    $errorCount = count($logCheck['errors']);
+    echo "  FAIL: Found {$errorCount} error(s) in Laravel log:\n";
+    foreach (array_slice($logCheck['errors'], 0, 3) as $err) {
+        echo "    [{$err['level']}] {$err['message']}\n";
+    }
+    if ($errorCount > 3) {
+        echo "    ... and ".($errorCount - 3)." more\n";
+    }
+    echo "\n";
+    $errors[] = "Laravel log contains {$errorCount} error(s)";
+}
+
+// Step 7-8: Delete project (unless --keep)
 if (! $keepProject) {
-    echo "[4/6] Deleting project via API...\n";
+    echo "[7/9] Deleting project via API...\n";
     $deleteResponse = httpRequest('DELETE', "{$apiBase}/projects/{$slug}");
 
     if ($deleteResponse['code'] !== 202) {
@@ -163,7 +286,7 @@ if (! $keepProject) {
         echo "  OK - HTTP 202 Accepted\n\n";
     }
 
-    echo "[5/6] Waiting for deletion (~5-10 seconds)...\n";
+    echo "[8/9] Waiting for deletion (~5-10 seconds)...\n";
     $timeout = 60;
     $start = time();
     $lastStatus = null;
@@ -191,14 +314,17 @@ if (! $keepProject) {
         $errors[] = "Deletion stuck on: {$lastStatus}";
     }
 } else {
-    echo "[4/6] Skipped (--keep flag)\n";
-    echo "[5/6] Skipped (--keep flag)\n\n";
+    echo "[7/9] Skipped (--keep flag)\n";
+    echo "[8/9] Skipped (--keep flag)\n\n";
 }
 
-// Step 6: Summary
-echo "[6/6] Results Summary\n";
+// Step 9: Summary
+echo "[9/9] Results Summary\n";
 echo "=====================================\n";
 echo 'Provision: '.implode(' -> ', $provisionEvents)."\n";
+echo "Database:  ".(empty($dbCheck['missing']) && !isset($dbCheck['error']) ? 'OK' : 'FAILED')."\n";
+echo "URL Test:  HTTP {$urlResponse['code']}\n";
+echo "Log Check: ".(empty($logCheck['errors']) ? 'OK' : count($logCheck['errors']).' errors')."\n";
 if (! $keepProject) {
     echo 'Deletion:  '.implode(' -> ', $deletionEvents)."\n";
 }
