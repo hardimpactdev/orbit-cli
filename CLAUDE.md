@@ -6,7 +6,7 @@ A Laravel Zero CLI tool for managing local PHP development environments using Do
 
 Launchpad sets up a complete local development environment with:
 - **Caddy** - Web server with automatic HTTPS (TLS internal)
-- **PHP 8.3 & 8.4** - Multiple PHP versions via PHP-FPM containers
+- **PHP 8.4 & 8.5** - Multiple PHP versions via PHP-FPM on host
 - **PostgreSQL** - Database server
 - **Redis** - Cache and session store
 - **Mailpit** - Local mail testing
@@ -623,7 +623,7 @@ See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-p
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
-| Bun install hangs | Progress bar blocks non-TTY | Use `bun install --no-progress` (built into CLI) |
+| Bun install hangs | Non-TTY progress output blocks | CLI uses CI=1 and --no-progress flags (v0.0.17+) |
 | Bun timeout (180s) | Peer dependency conflicts | CLI auto-falls back to `npm install --legacy-peer-deps` |
 | Provisioning > 30s | Check bun hang, network, deps | `timeout 30 launchpad provision test-project ...` |
 | SQLite instead of pgsql | Provisioning failed early | `sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env` |
@@ -635,7 +635,11 @@ See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-p
 
 Web app (`~/.config/launchpad/web/`) provides API for project management. Horizon (systemd/launchd service) processes queue jobs.
 
-**Key Concept:** Web app (via PHP-FPM) and Horizon both run on the host. They connect to Redis container via Docker network bridge (localhost:6379).
+**Key Concept:** Web app (via PHP-FPM) and Horizon both run on the host. They connect to Docker services via localhost (ports exposed to host).
+
+**Important .env settings:** Since Horizon runs on host (not in Docker), use `localhost` for service hosts:
+- `REDIS_HOST=localhost` (NOT `launchpad-redis`)
+- `REVERB_HOST=localhost` (NOT `launchpad-reverb`)
 
 ### API Endpoints
 
