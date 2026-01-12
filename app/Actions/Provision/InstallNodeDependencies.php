@@ -81,10 +81,10 @@ final readonly class InstallNodeDependencies
         $logger->info('Installing dependencies with Bun...');
 
         try {
-            $result = Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
+            $result = Process::env(['CI' => '1', 'PATH' => "{$home}/.bun/bin:".getenv('PATH')])
                 ->path($projectPath)
                 ->timeout(60)
-                ->run("{$bunPath} install 2>&1");
+                ->run("{$bunPath} install --no-progress 2>&1");
 
             if (! $result->successful()) {
                 return StepResult::failed('Bun install failed: '.substr($result->output(), 0, 500));

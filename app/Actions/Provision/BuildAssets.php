@@ -62,7 +62,7 @@ final readonly class BuildAssets
     {
         $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
 
-        return Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
+        return Process::env(['CI' => '1', 'PATH' => "{$home}/.bun/bin:".getenv('PATH')])
             ->path($projectPath)
             ->timeout(60)
             ->run("{$bunPath} run build 2>&1");
