@@ -141,14 +141,14 @@ class MacAdapter implements PlatformAdapter
 
     public function getPhpBinaryPath(string $version): string
     {
-        $normalizedVersion = str_replace('.', '', $version);
+        $normalizedVersion = $this->normalizePhpVersion($version);
 
         return "/opt/homebrew/opt/php@{$normalizedVersion}/bin/php";
     }
 
     public function getPoolConfigDir(string $version): string
     {
-        $normalizedVersion = str_replace('.', '', $version);
+        $normalizedVersion = $this->normalizePhpVersion($version);
 
         return "/opt/homebrew/etc/php/{$normalizedVersion}/php-fpm.d";
     }

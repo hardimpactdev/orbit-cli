@@ -42,8 +42,9 @@ class MigrateToFpmCommand extends Command
         }
 
         if (! $usingFrankenPhp && ! $usingFpm) {
-            // Fresh install - just use the new architecture
-            return $this->outputResult(['success' => true, 'message' => 'No existing installation detected']);
+            // Fresh install - set up FPM architecture
+            $this->info('Setting up PHP-FPM architecture...');
+            // Fall through to FPM setup
         }
 
         // Confirm migration

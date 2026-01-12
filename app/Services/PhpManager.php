@@ -227,7 +227,7 @@ class PhpManager
             File::makeDirectory($logDir, 0755, true);
         }
 
-        return '{}/php{}-fpm.log';
+        return "$logDir/php$normalizedVersion-fpm.log";
     }
 
     /**
