@@ -5,9 +5,9 @@ namespace App\Commands;
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use App\Services\CaddyManager;
-use App\Services\DockerManager;
 use App\Services\HorizonManager;
 use App\Services\PhpManager;
+use App\Services\ServiceManager;
 use LaravelZero\Framework\Commands\Command;
 
 class StopCommand extends Command
@@ -19,7 +19,7 @@ class StopCommand extends Command
     protected $description = 'Stop all Launchpad services';
 
     public function handle(
-        DockerManager $dockerManager,
+        ServiceManager $serviceManager,
         PhpManager $phpManager,
         CaddyManager $caddyManager,
         HorizonManager $horizonManager
@@ -30,10 +30,8 @@ class StopCommand extends Command
         // Stop Horizon first
         if ($usingFpm) {
             $result = $this->runStep('horizon', 'Stopping horizon', fn () => $horizonManager->stop());
-        } else {
-            $result = $this->runStep('horizon', 'Stopping horizon', fn () => $dockerManager->stop('horizon'));
+            $results['horizon'] = $result;
         }
-        $results['horizon'] = $result;
 
         if ($usingFpm) {
             // Stop host Caddy
@@ -41,26 +39,11 @@ class StopCommand extends Command
             $results['caddy'] = $result;
 
             // Note: We don"t stop PHP-FPM pools to keep them available for other projects
-            // Just stop the Docker services
-        } else {
-            // FrankenPHP Architecture
-            $result = $this->runStep('caddy', 'Stopping caddy', fn () => $dockerManager->stop('caddy'));
-            $results['caddy'] = $result;
-
-            $result = $this->runStep('php', 'Stopping php', fn () => $dockerManager->stop('php'));
-            $results['php'] = $result;
         }
 
-        // Stop other Docker services
-        $services = ['mailpit', 'redis', 'postgres'];
-        foreach ($services as $service) {
-            $result = $this->runStep($service, "Stopping {$service}", fn () => $dockerManager->stop($service));
-            $results[$service] = $result;
-        }
-
-        // Stop DNS last
-        $result = $this->runStep('dns', 'Stopping dns', fn () => $dockerManager->stop('dns'));
-        $results['dns'] = $result;
+        // Stop all Docker services via ServiceManager
+        $serviceResult = $this->runStep('services', 'Stopping Docker services', fn () => $serviceManager->stopAll());
+        $results['docker_services'] = $serviceResult;
 
         $allSuccess = ! in_array(false, $results, true);
 

@@ -6,6 +6,7 @@ use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\DockerManager;
 use App\Services\PlatformService;
+use App\Services\ServiceManager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
@@ -27,6 +28,7 @@ class InitCommand extends Command
     protected bool $autoConfirm = false;
 
     public function handle(
+        ServiceManager $serviceManager,
         ConfigManager $configManager,
         DockerManager $dockerManager,
         CaddyfileGenerator $caddyfileGenerator,
@@ -118,6 +120,15 @@ class InitCommand extends Command
             $caddyfileGenerator->generate();
 
             return true;
+        });
+
+        // 4.5. Initialize services.yaml and generate docker-compose.yaml
+        $this->task('Initializing service configuration', function () use ($serviceManager) {
+            // ServiceManager will auto-create services.yaml from stub if missing
+            $serviceManager->loadServices();
+
+            // Generate docker-compose.yaml from services configuration
+            return $serviceManager->regenerateCompose();
         });
 
         // 5. Create docker network

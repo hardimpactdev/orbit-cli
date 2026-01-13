@@ -1,0 +1,46 @@
+{
+    "name": "reverb",
+    "label": "Laravel Reverb",
+    "description": "Blazing fast WebSocket server for Laravel",
+    "category": "communication",
+    "versions": ["latest"],
+    "configSchema": {
+        "required": ["port"],
+        "properties": {
+            "port": {
+                "type": "number",
+                "default": 8080,
+                "minimum": 1024,
+                "maximum": 65535
+            },
+            "environment": {
+                "type": "object",
+                "properties": {
+                    "REVERB_APP_ID": {
+                        "type": "string",
+                        "default": "launchpad"
+                    },
+                    "REVERB_APP_KEY": {
+                        "type": "string",
+                        "default": "launchpad-key"
+                    },
+                    "REVERB_APP_SECRET": {
+                        "type": "string",
+                        "default": "launchpad-secret"
+                    }
+                }
+            }
+        }
+    },
+    "dockerConfig": {
+        "image": "quay.io/soketi/soketi:${version}",
+        "ports": ["8080:8080"],
+        "environment": {
+            "SOKETI_DEFAULT_APP_ID": "launchpad",
+            "SOKETI_DEFAULT_APP_KEY": "launchpad-key",
+            "SOKETI_DEFAULT_APP_SECRET": "launchpad-secret",
+            "SOKETI_USER_AUTHENTICATION_TIMEOUT": "30000"
+        }
+    },
+    "dependsOn": []
+}

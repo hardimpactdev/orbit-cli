@@ -6,22 +6,6 @@ use Illuminate\Support\Facades\Process;
 
 class DockerManager
 {
-    /**
-     * All launchpad containers that can be managed.
-     */
-    public const CONTAINERS = [
-        'dns' => 'launchpad-dns',
-        'php-83' => 'launchpad-php-83',
-        'php-84' => 'launchpad-php-84',
-        'php-85' => 'launchpad-php-85',
-        'caddy' => 'launchpad-caddy',
-        'postgres' => 'launchpad-postgres',
-        'redis' => 'launchpad-redis',
-        'mailpit' => 'launchpad-mailpit',
-        'reverb' => 'launchpad-reverb',
-        'horizon' => 'launchpad-horizon',
-    ];
-
     protected string $basePath;
 
     protected ?string $lastError = null;
@@ -44,20 +28,10 @@ class DockerManager
     }
 
     /**
-     * Get all container names.
-     *
-     * @return array<string, string>
-     */
-    public function getContainers(): array
-    {
-        return self::CONTAINERS;
-    }
-
-    /**
-     * Get status and health for all containers in a single batch query.
+     * Get status and health for all launchpad containers in a single batch query.
      * This is much faster than calling isRunning() and getHealthStatus() individually.
      *
-     * @return array<string, array{running: bool, health: ?string}>
+     * @return array<string, array{running: bool, health: ?string, container: string}>
      */
     public function getAllStatuses(): array
     {
@@ -65,18 +39,9 @@ class DockerManager
             return $this->statusCache;
         }
 
-        // Initialize all containers as stopped
         $statuses = [];
-        foreach (self::CONTAINERS as $name => $container) {
-            $statuses[$name] = [
-                'running' => false,
-                'health' => null,
-                'container' => $container,
-            ];
-        }
 
         // Single query to get all running launchpad containers with their health status
-        // Format: container_name|health_status (health_status is empty if no healthcheck)
         $result = Process::run(
             "docker ps --filter 'name=launchpad-' --format '{{.Names}}|{{if .Status}}{{.Status}}{{end}}' 2>/dev/null"
         );
@@ -92,13 +57,14 @@ class DockerManager
             }
             [$containerName] = explode('|', $line, 2);
             $runningContainers[] = $containerName;
-        }
 
-        // Mark running containers
-        foreach (self::CONTAINERS as $name => $container) {
-            if (in_array($container, $runningContainers, true)) {
-                $statuses[$name]['running'] = true;
-            }
+            // Extract service name from container name (launchpad-redis -> redis)
+            $serviceName = str_replace('launchpad-', '', $containerName);
+            $statuses[$serviceName] = [
+                'running' => true,
+                'health' => null,
+                'container' => $containerName,
+            ];
         }
 
         // Batch health check for all running containers
@@ -116,12 +82,11 @@ class DockerManager
                     [$containerName, $health] = explode('|', $line, 2);
                     $containerName = ltrim($containerName, '/'); // docker inspect returns /container_name
 
-                    // Find the service name for this container
-                    foreach (self::CONTAINERS as $serviceName => $container) {
-                        if ($container === $containerName) {
-                            $statuses[$serviceName]['health'] = $health === 'none' ? null : $health;
-                            break;
-                        }
+                    // Extract service name
+                    $serviceName = str_replace('launchpad-', '', $containerName);
+
+                    if (isset($statuses[$serviceName])) {
+                        $statuses[$serviceName]['health'] = $health === 'none' ? null : $health;
                     }
                 }
             }
@@ -143,40 +108,41 @@ class DockerManager
     public function startAll(): void
     {
         $this->clearStatusCache();
-        $this->start('dns');
-        $this->start('php');
-        $this->start('caddy');
+        $composePath = $this->configManager->getConfigPath().'/docker-compose.yaml';
 
-        foreach ($this->configManager->getEnabledServices() as $service) {
-            $this->start($service);
+        if (! file_exists($composePath)) {
+            $this->lastError = "docker-compose.yaml not found. Run 'launchpad init' first.";
+
+            return;
         }
+
+        Process::run("docker compose -f {$composePath} up -d");
     }
 
     public function stopAll(): void
     {
         $this->clearStatusCache();
-        $this->stop('caddy');
-        $this->stop('php');
+        $composePath = $this->configManager->getConfigPath().'/docker-compose.yaml';
 
-        foreach ($this->configManager->getEnabledServices() as $service) {
-            $this->stop($service);
+        if (! file_exists($composePath)) {
+            return;
         }
 
-        $this->stop('dns');
+        Process::run("docker compose -f {$composePath} down");
     }
 
     public function start(string $service): bool
     {
         $this->clearStatusCache();
-        $composePath = $this->getComposePath($service);
+        $composePath = $this->configManager->getConfigPath().'/docker-compose.yaml';
 
         if (! file_exists($composePath)) {
-            $this->lastError = "File not found: {$composePath}";
+            $this->lastError = 'docker-compose.yaml not found';
 
             return false;
         }
 
-        $result = Process::run("docker compose -f {$composePath} up -d");
+        $result = Process::run("docker compose -f {$composePath} up -d {$service}");
 
         if (! $result->successful()) {
             $this->lastError = $result->errorOutput() ?: $result->output();
@@ -188,15 +154,15 @@ class DockerManager
     public function stop(string $service): bool
     {
         $this->clearStatusCache();
-        $composePath = $this->getComposePath($service);
+        $composePath = $this->configManager->getConfigPath().'/docker-compose.yaml';
 
         if (! file_exists($composePath)) {
-            $this->lastError = "File not found: {$composePath}";
+            $this->lastError = 'docker-compose.yaml not found';
 
             return false;
         }
 
-        $result = Process::run("docker compose -f {$composePath} down");
+        $result = Process::run("docker compose -f {$composePath} stop {$service}");
 
         if (! $result->successful()) {
             $this->lastError = $result->errorOutput() ?: $result->output();
@@ -214,16 +180,17 @@ class DockerManager
 
     public function build(string $service): bool
     {
-        $composePath = $this->getComposePath($service);
+        // For services that need building (like dns), use legacy compose files
+        $legacyComposePath = "{$this->basePath}/{$service}/docker-compose.yml";
 
-        if (! file_exists($composePath)) {
-            $this->lastError = "File not found: {$composePath}";
+        if (! file_exists($legacyComposePath)) {
+            $this->lastError = "Build config not found for {$service}";
 
             return false;
         }
 
         $env = $this->getServiceEnv($service);
-        $result = Process::env($env)->run("docker compose -f {$composePath} build");
+        $result = Process::env($env)->run("docker compose -f {$legacyComposePath} build");
 
         if (! $result->successful()) {
             $this->lastError = $result->errorOutput() ?: $result->output();
@@ -234,15 +201,16 @@ class DockerManager
 
     public function pull(string $service): bool
     {
-        $composePath = $this->getComposePath($service);
+        // For pulling images, use legacy compose files
+        $legacyComposePath = "{$this->basePath}/{$service}/docker-compose.yml";
 
-        if (! file_exists($composePath)) {
-            $this->lastError = "File not found: {$composePath}";
+        if (! file_exists($legacyComposePath)) {
+            $this->lastError = "Compose file not found for {$service}";
 
             return false;
         }
 
-        $result = Process::run("docker compose -f {$composePath} pull");
+        $result = Process::run("docker compose -f {$legacyComposePath} pull");
 
         if (! $result->successful()) {
             $this->lastError = $result->errorOutput() ?: $result->output();
@@ -259,8 +227,17 @@ class DockerManager
 
     public function createNetwork(): bool
     {
-        // Network is created by DNS docker-compose, no manual creation needed
-        return true;
+        // Check if network exists
+        $result = Process::run('docker network inspect launchpad 2>/dev/null');
+
+        if ($result->successful()) {
+            return true; // Network already exists
+        }
+
+        // Create network
+        $result = Process::run('docker network create launchpad');
+
+        return $result->successful();
     }
 
     /**
@@ -271,10 +248,9 @@ class DockerManager
     {
         // Use cache if available
         if ($this->statusCache !== null) {
-            foreach ($this->statusCache as $status) {
-                if ($status['container'] === $container) {
-                    return $status['running'];
-                }
+            $serviceName = str_replace('launchpad-', '', $container);
+            if (isset($this->statusCache[$serviceName])) {
+                return $this->statusCache[$serviceName]['running'];
             }
         }
 
@@ -293,10 +269,9 @@ class DockerManager
     {
         // Use cache if available
         if ($this->statusCache !== null) {
-            foreach ($this->statusCache as $status) {
-                if ($status['container'] === $container) {
-                    return $status['health'];
-                }
+            $serviceName = str_replace('launchpad-', '', $container);
+            if (isset($this->statusCache[$serviceName])) {
+                return $this->statusCache[$serviceName]['health'];
             }
         }
 
@@ -311,11 +286,6 @@ class DockerManager
         $status = trim($result->output());
 
         return $status === 'none' ? null : $status;
-    }
-
-    protected function getComposePath(string $service): string
-    {
-        return "{$this->basePath}/{$service}/docker-compose.yml";
     }
 
     protected function getServiceEnv(string $service): array

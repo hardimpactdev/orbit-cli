@@ -1,0 +1,35 @@
+# Launchpad Services Configuration
+# This file defines which Docker services are enabled and their configuration.
+# Run 'launchpad services:regenerate' after making changes.
+
+services:
+  postgres:
+    enabled: true
+    version: "17"
+    port: 5432
+    environment:
+      POSTGRES_USER: launchpad
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: launchpad
+
+  redis:
+    enabled: true
+    version: "7.4"
+    port: 6379
+    maxmemory: 256mb
+    persistence: true
+
+  mailpit:
+    enabled: true
+    version: latest
+    smtp_port: 1025
+    http_port: 8025
+
+  reverb:
+    enabled: false
+    version: latest
+    port: 8080
+    environment:
+      REVERB_APP_ID: launchpad
+      REVERB_APP_KEY: launchpad-key
+      REVERB_APP_SECRET: launchpad-secret

@@ -6,9 +6,9 @@ use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\CaddyManager;
-use App\Services\DockerManager;
 use App\Services\HorizonManager;
 use App\Services\PhpManager;
+use App\Services\ServiceManager;
 use LaravelZero\Framework\Commands\Command;
 
 class StartCommand extends Command
@@ -20,7 +20,7 @@ class StartCommand extends Command
     protected $description = 'Start all Launchpad services';
 
     public function handle(
-        DockerManager $dockerManager,
+        ServiceManager $serviceManager,
         CaddyfileGenerator $caddyfileGenerator,
         PhpManager $phpManager,
         CaddyManager $caddyManager,
@@ -37,11 +37,6 @@ class StartCommand extends Command
         });
         $results['config'] = $configResult;
         $allSuccess = $configResult;
-
-        // Start DNS (always Docker)
-        $result = $this->runStep('dns', 'Starting dns', fn () => $dockerManager->start('dns'));
-        $results['dns'] = $result;
-        $allSuccess = $allSuccess && $result;
 
         if ($usingFpm) {
             // PHP-FPM Architecture
@@ -63,33 +58,19 @@ class StartCommand extends Command
             $result = $this->runStep('caddy', 'Starting caddy', fn () => $caddyManager->start());
             $results['caddy'] = $result;
             $allSuccess = $allSuccess && $result;
-        } else {
-            // FrankenPHP Architecture (legacy)
-            $result = $this->runStep('php', 'Starting php', fn () => $dockerManager->start('php'));
-            $results['php'] = $result;
-            $allSuccess = $allSuccess && $result;
-
-            $result = $this->runStep('caddy', 'Starting caddy', fn () => $dockerManager->start('caddy'));
-            $results['caddy'] = $result;
-            $allSuccess = $allSuccess && $result;
         }
 
-        // Start database services (always Docker)
-        $services = ['postgres', 'redis', 'mailpit'];
-        foreach ($services as $service) {
-            $result = $this->runStep($service, "Starting {$service}", fn () => $dockerManager->start($service));
-            $results[$service] = $result;
-            $allSuccess = $allSuccess && $result;
-        }
+        // Start all Docker services via ServiceManager
+        $serviceResult = $this->runStep('services', 'Starting Docker services', fn () => $serviceManager->startAll());
+        $results['docker_services'] = $serviceResult;
+        $allSuccess = $allSuccess && $serviceResult;
 
         // Start Horizon
         if ($usingFpm) {
             $result = $this->runStep('horizon', 'Starting horizon', fn () => $horizonManager->start());
-        } else {
-            $result = $this->runStep('horizon', 'Starting horizon', fn () => $dockerManager->start('horizon'));
+            $results['horizon'] = $result;
+            $allSuccess = $allSuccess && $result;
         }
-        $results['horizon'] = $result;
-        $allSuccess = $allSuccess && $result;
 
         if ($this->wantsJson()) {
             return $this->outputJson([

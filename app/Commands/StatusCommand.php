@@ -8,6 +8,7 @@ use App\Services\ConfigManager;
 use App\Services\DockerManager;
 use App\Services\HorizonManager;
 use App\Services\PhpManager;
+use App\Services\ServiceManager;
 use App\Services\SiteScanner;
 use LaravelZero\Framework\Commands\Command;
 
@@ -20,6 +21,7 @@ class StatusCommand extends Command
     protected $description = 'Show Launchpad status and running services';
 
     public function handle(
+        ServiceManager $serviceManager,
         DockerManager $dockerManager,
         ConfigManager $configManager,
         SiteScanner $siteScanner,
@@ -90,18 +92,13 @@ class StatusCommand extends Command
                 $runningCount++;
                 $healthyCount++;
             }
-
-            // Docker services that remain containerized
-            $dockerServices = ['dns', 'postgres', 'redis', 'mailpit', 'reverb'];
-        } else {
-            // FrankenPHP Architecture - all Docker
-            $dockerServices = ['dns', 'php-83', 'php-84', 'php-85', 'caddy', 'postgres', 'redis', 'mailpit', 'horizon', 'reverb'];
         }
 
-        // Query Docker container statuses
+        // Get Docker service statuses from ServiceManager
+        $enabledServices = $serviceManager->getEnabled();
         $allStatuses = $dockerManager->getAllStatuses();
 
-        foreach ($dockerServices as $name) {
+        foreach ($enabledServices as $name => $config) {
             $status = $allStatuses[$name] ?? ['running' => false, 'health' => null, 'container' => "launchpad-{$name}"];
             $services[$name] = [
                 'status' => $status['running'] ? 'running' : 'stopped',
