@@ -43,7 +43,7 @@ class StatusCommand extends Command
             // Check PHP-FPM pools
             $phpRunning = false;
             $phpVersions = [];
-            foreach (['8.3', '8.4'] as $version) {
+            foreach ($phpManager->getInstalledVersions() as $version) {
                 if ($phpManager->isInstalled($version)) {
                     $running = $phpManager->isRunning($version);
                     $phpVersions[$version] = $running;
@@ -190,7 +190,7 @@ class StatusCommand extends Command
 
     private function isUsingFpm(PhpManager $phpManager): bool
     {
-        $versions = ['8.3', '8.4'];
+        $versions = $phpManager->getInstalledVersions();
         foreach ($versions as $version) {
             if (file_exists($phpManager->getSocketPath($version))) {
                 return true;

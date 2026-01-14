@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\ServiceController;
 use Illuminate\Support\Facades\Route;
 
 // Health check
@@ -23,6 +24,11 @@ Route::post('/services/{service}/start', [ApiController::class, 'startService'])
 Route::post('/services/{service}/stop', [ApiController::class, 'stopService']);
 Route::post('/services/{service}/restart', [ApiController::class, 'restartService']);
 Route::get('/services/{service}/logs', [ApiController::class, 'serviceLogs']);
+
+// Host Service Control
+Route::post('/host-services/{service}/start', [ApiController::class, 'startHostService']);
+Route::post('/host-services/{service}/stop', [ApiController::class, 'stopHostService']);
+Route::post('/host-services/{service}/restart', [ApiController::class, 'restartHostService']);
 
 // PHP Management
 Route::get('/php/{site}', [ApiController::class, 'getPhp']);
@@ -56,3 +62,11 @@ Route::delete('/packages/{app}/unlink/{package}', [ApiController::class, 'unlink
 // GitHub
 Route::get('/github/user', [ApiController::class, 'githubUser']);
 Route::get('/github/repo/{owner}/{repo}', [ApiController::class, 'checkRepo']);
+
+// Service Management
+Route::get('/services', [ServiceController::class, 'index']);
+Route::get('/services/available', [ServiceController::class, 'available']);
+Route::post('/services/{service}/enable', [ServiceController::class, 'enable']);
+Route::delete('/services/{service}', [ServiceController::class, 'disable']);
+Route::put('/services/{service}/config', [ServiceController::class, 'updateConfig']);
+Route::get('/services/{service}/info', [ServiceController::class, 'info']);

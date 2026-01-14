@@ -288,6 +288,32 @@ class ApiController extends Controller
         ]);
     }
 
+    // ===== Host Service Control =====
+
+    /**
+     * Start a host service.
+     */
+    public function startHostService(string $service): JsonResponse
+    {
+        return response()->json($this->executeCommand('host:start '.escapeshellarg($service)));
+    }
+
+    /**
+     * Stop a host service.
+     */
+    public function stopHostService(string $service): JsonResponse
+    {
+        return response()->json($this->executeCommand('host:stop '.escapeshellarg($service)));
+    }
+
+    /**
+     * Restart a host service.
+     */
+    public function restartHostService(string $service): JsonResponse
+    {
+        return response()->json($this->executeCommand('host:restart '.escapeshellarg($service)));
+    }
+
     // ===== PHP Management =====
 
     /**
@@ -295,7 +321,7 @@ class ApiController extends Controller
      */
     public function getPhp(string $site): JsonResponse
     {
-        return response()->json($this->executeCommand('php', ['site' => $site]));
+        return response()->json($this->executeCommand('php '.escapeshellarg($site)));
     }
 
     /**
@@ -307,10 +333,7 @@ class ApiController extends Controller
             'version' => 'required|string|in:8.1,8.2,8.3,8.4,8.5',
         ]);
 
-        return response()->json($this->executeCommand('php', [
-            'site' => $site,
-            'version' => $validated['version'],
-        ]));
+        return response()->json($this->executeCommand('php '.escapeshellarg($site).' '.escapeshellarg($validated['version'])));
     }
 
     /**
@@ -318,10 +341,7 @@ class ApiController extends Controller
      */
     public function resetPhp(string $site): JsonResponse
     {
-        return response()->json($this->executeCommand('php', [
-            'site' => $site,
-            'reset' => true,
-        ]));
+        return response()->json($this->executeCommand('php '.escapeshellarg($site), ['reset' => true]));
     }
 
     // ===== Projects =====

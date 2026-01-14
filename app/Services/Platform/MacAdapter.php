@@ -33,7 +33,7 @@ class MacAdapter implements PlatformAdapter
     public function isPhpInstalled(string $version): bool
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
-        $result = Process::run("brew list php@{$normalizedVersion}");
+        $result = Process::run('brew list '.$this->getBrewPhpFormula($normalizedVersion));
 
         return $result->successful();
     }
@@ -43,7 +43,7 @@ class MacAdapter implements PlatformAdapter
      */
     public function getInstalledPhpVersions(): array
     {
-        $result = Process::run("brew list | grep '^php@' | sed 's/php@//'");
+        $result = Process::run("brew list 2>/dev/null | grep -E '^php(@[0-9.]+)?$' | sed 's/php@//; s/^php$/8.5/'");
 
         if (! $result->successful()) {
             return [];
@@ -58,7 +58,7 @@ class MacAdapter implements PlatformAdapter
     public function startPhpFpm(string $version): bool
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
-        $result = Process::run("brew services start php@{$normalizedVersion}");
+        $result = Process::run('brew services start '.$this->getBrewPhpFormula($normalizedVersion));
 
         return $result->successful();
     }
@@ -69,7 +69,7 @@ class MacAdapter implements PlatformAdapter
     public function stopPhpFpm(string $version): bool
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
-        $result = Process::run("brew services stop php@{$normalizedVersion}");
+        $result = Process::run('brew services stop '.$this->getBrewPhpFormula($normalizedVersion));
 
         return $result->successful();
     }
@@ -80,7 +80,7 @@ class MacAdapter implements PlatformAdapter
     public function restartPhpFpm(string $version): bool
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
-        $result = Process::run("brew services restart php@{$normalizedVersion}");
+        $result = Process::run('brew services restart '.$this->getBrewPhpFormula($normalizedVersion));
 
         return $result->successful();
     }
@@ -91,7 +91,7 @@ class MacAdapter implements PlatformAdapter
     public function isPhpFpmRunning(string $version): bool
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
-        $result = Process::run("brew services list | grep php@{$normalizedVersion} | grep -q started");
+        $result = Process::run("pgrep -f 'php-fpm.*".str_replace('.', '', $normalizedVersion)."' > /dev/null");
 
         return $result->successful();
     }
@@ -143,14 +143,14 @@ class MacAdapter implements PlatformAdapter
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
 
-        return "/opt/homebrew/opt/php@{$normalizedVersion}/bin/php";
+        return '/opt/homebrew/opt/'.$this->getBrewPhpFormula($normalizedVersion).'/bin/php';
     }
 
     public function getPoolConfigDir(string $version): string
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
 
-        return "/opt/homebrew/etc/php/{$normalizedVersion}/php-fpm.d";
+        return '/opt/homebrew/etc/php/'.$normalizedVersion.'/php-fpm.d';
     }
 
     public function installCaddy(): bool
@@ -197,7 +197,7 @@ class MacAdapter implements PlatformAdapter
 
     public function isCaddyRunning(): bool
     {
-        $result = Process::run('brew services list | grep caddy | grep -q started');
+        $result = Process::run('pgrep -x caddy > /dev/null');
 
         return $result->successful();
     }
@@ -232,5 +232,21 @@ class MacAdapter implements PlatformAdapter
         }
 
         return $version;
+    }
+
+    /**
+     * Get the Homebrew formula name for a PHP version.
+     * PHP 8.5 is the current default and uses just 'php', older versions use 'php@X.Y'.
+     */
+    protected function getBrewPhpFormula(string $version): string
+    {
+        $normalized = $this->normalizePhpVersion($version);
+
+        // PHP 8.5 is the current Homebrew default (no version suffix)
+        if ($normalized === '8.5') {
+            return 'php';
+        }
+
+        return 'php@'.$normalized;
     }
 }
