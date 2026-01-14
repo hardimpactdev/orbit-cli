@@ -18,11 +18,14 @@ class ServiceManager
     protected array $services = [];
 
     public function __construct(
-        protected ?ConfigManager $configManager = new ConfigManager,
+        protected ?ConfigManager $configManager = null,
         ?ComposeGenerator $composeGenerator = null,
-        protected ?ServiceTemplateLoader $templateLoader = new ServiceTemplateLoader,
-        protected ?ServiceConfigValidator $validator = new ServiceConfigValidator
+        protected ?ServiceTemplateLoader $templateLoader = null,
+        protected ?ServiceConfigValidator $validator = null
     ) {
+        $this->configManager ??= new ConfigManager;
+        $this->templateLoader ??= new ServiceTemplateLoader;
+        $this->validator ??= new ServiceConfigValidator;
         $this->composeGenerator = $composeGenerator ?? new ComposeGenerator($this->configManager);
         $this->servicesPath = $this->configManager->getConfigPath().'/services.yaml';
 
@@ -279,7 +282,15 @@ class ServiceManager
             return true; // Already doesn't exist
         }
 
-        $this->services[$name]['enabled'] = false;
+        // Check if service is required
+        if ($this->templateLoader->exists($name)) {
+            $template = $this->templateLoader->load($name);
+            if ($template->isRequired()) {
+                throw new RuntimeException("Service '{$name}' is required and cannot be disabled");
+            }
+        }
+
+        unset($this->services[$name]);
 
         return $this->saveServices();
     }

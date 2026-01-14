@@ -23,9 +23,3 @@ parameters:
 			identifier: if.alwaysFalse
 			count: 1
 			path: app/Commands/ProvisionCommand.php
-
-		-
-			message: '#^Offset ''container'' does not exist on array\{running\: bool, health\: string\|null\}\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: app/Services/DockerManager.php

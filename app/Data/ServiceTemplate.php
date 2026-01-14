@@ -11,6 +11,7 @@ final readonly class ServiceTemplate
      * @param  array<string, mixed>  $configSchema  JSON schema for configuration validation
      * @param  array<string, mixed>  $dockerConfig  Docker container configuration
      * @param  array<string>  $dependsOn  Other services this service depends on
+     * @param  bool  $required  Whether this service is required and cannot be disabled
      */
     public function __construct(
         public string $name,
@@ -21,6 +22,7 @@ final readonly class ServiceTemplate
         public array $configSchema,
         public array $dockerConfig,
         public array $dependsOn = [],
+        public bool $required = false,
     ) {}
 
     /**
@@ -39,6 +41,7 @@ final readonly class ServiceTemplate
             configSchema: $data['configSchema'] ?? [],
             dockerConfig: $data['dockerConfig'] ?? [],
             dependsOn: $data['dependsOn'] ?? [],
+            required: $data['required'] ?? false,
         );
     }
 
@@ -58,6 +61,7 @@ final readonly class ServiceTemplate
             'configSchema' => $this->configSchema,
             'dockerConfig' => $this->dockerConfig,
             'dependsOn' => $this->dependsOn,
+            'required' => $this->required,
         ];
     }
 
@@ -83,5 +87,13 @@ final readonly class ServiceTemplate
     public function supportsVersion(string $version): bool
     {
         return in_array($version, $this->versions, true);
+    }
+
+    /**
+     * Check if this service is required and cannot be disabled.
+     */
+    public function isRequired(): bool
+    {
+        return $this->required;
     }
 }

@@ -1,8 +1,13 @@
 # Launchpad Services Configuration
 # This file defines which Docker services are enabled and their configuration.
-# Run 'launchpad services:regenerate' after making changes.
+# Run 'launchpad service:regenerate' after making changes.
 
 services:
+  dns:
+    enabled: true
+    version: latest
+    port: 53
+
   postgres:
     enabled: true
     version: "17"

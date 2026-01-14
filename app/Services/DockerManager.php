@@ -13,7 +13,7 @@ class DockerManager
     /**
      * Cached container statuses from batch query.
      *
-     * @var array<string, array{running: bool, health: ?string}>|null
+     * @var array<string, array{running: bool, health: ?string, container: string}>|null
      */
     protected ?array $statusCache = null;
 

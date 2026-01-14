@@ -8,7 +8,11 @@ use App\Data\ServiceTemplate;
 
 class ComposeGenerator
 {
-    public function __construct(protected ?ConfigManager $configManager = new ConfigManager, protected ?ServiceTemplateLoader $templateLoader = new ServiceTemplateLoader) {}
+    public function __construct(protected ?ConfigManager $configManager = null, protected ?ServiceTemplateLoader $templateLoader = null)
+    {
+        $this->configManager ??= new ConfigManager;
+        $this->templateLoader ??= new ServiceTemplateLoader;
+    }
 
     /**
      * Generate docker-compose.yml content from service configurations.
@@ -221,7 +225,7 @@ class ComposeGenerator
     /**
      * Convert array to YAML string (simple implementation).
      *
-     * @param  array<string, mixed>  $data
+     * @param  array<array-key, mixed>  $data
      */
     protected function arrayToYaml(array $data, int $indent = 0): string
     {
@@ -288,13 +292,18 @@ class ComposeGenerator
             return 'null';
         }
 
-        if (is_numeric($value)) {
+        if (is_int($value) || is_float($value)) {
             return (string) $value;
         }
 
         if (is_string($value)) {
             // Quote strings that might be interpreted as other types
             if (in_array(strtolower($value), ['true', 'false', 'null', 'yes', 'no', 'on', 'off', ''])) {
+                return '"'.$value.'"';
+            }
+
+            // Quote numeric strings (e.g., "3.8" for version)
+            if (is_numeric($value)) {
                 return '"'.$value.'"';
             }
 

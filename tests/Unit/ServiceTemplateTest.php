@@ -15,6 +15,7 @@ describe('ServiceTemplate DTO', function () {
             'configSchema' => ['type' => 'object'],
             'dockerConfig' => ['image' => 'redis:7.4'],
             'dependsOn' => ['network'],
+            'required' => false,
         ];
 
         $template = ServiceTemplate::fromArray($data);
@@ -26,7 +27,8 @@ describe('ServiceTemplate DTO', function () {
             ->and($template->versions)->toBe(['7.4', '7.2'])
             ->and($template->configSchema)->toBe(['type' => 'object'])
             ->and($template->dockerConfig)->toBe(['image' => 'redis:7.4'])
-            ->and($template->dependsOn)->toBe(['network']);
+            ->and($template->dependsOn)->toBe(['network'])
+            ->and($template->required)->toBeFalse();
     });
 
     it('converts to array', function () {
@@ -39,6 +41,7 @@ describe('ServiceTemplate DTO', function () {
             configSchema: [],
             dockerConfig: [],
             dependsOn: [],
+            required: false,
         );
 
         $array = $template->toArray();
@@ -52,6 +55,7 @@ describe('ServiceTemplate DTO', function () {
             'configSchema' => [],
             'dockerConfig' => [],
             'dependsOn' => [],
+            'required' => false,
         ]);
     });
 
@@ -65,6 +69,7 @@ describe('ServiceTemplate DTO', function () {
             configSchema: [],
             dockerConfig: [],
             dependsOn: ['redis', 'postgres'],
+            required: false,
         );
 
         expect($template->dependsOn('redis'))->toBeTrue()
@@ -81,6 +86,7 @@ describe('ServiceTemplate DTO', function () {
             versions: ['7.4', '7.2', '7.0'],
             configSchema: [],
             dockerConfig: [],
+            required: false,
         );
 
         expect($template->getDefaultVersion())->toBe('7.4');
@@ -95,6 +101,7 @@ describe('ServiceTemplate DTO', function () {
             versions: [],
             configSchema: [],
             dockerConfig: [],
+            required: false,
         );
 
         expect($template->getDefaultVersion())->toBeNull();
@@ -109,6 +116,7 @@ describe('ServiceTemplate DTO', function () {
             versions: ['7.4', '7.2', '7.0'],
             configSchema: [],
             dockerConfig: [],
+            required: false,
         );
 
         expect($template->supportsVersion('7.4'))->toBeTrue()
@@ -319,6 +327,7 @@ describe('ServiceConfigValidator', function () {
                 'properties' => [],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result = $this->validator->validate(['port' => 6379], $template);
@@ -341,6 +350,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result = $this->validator->validate([
@@ -368,6 +378,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result = $this->validator->validate(['mode' => 'invalid'], $template);
@@ -393,6 +404,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result1 = $this->validator->validate(['port' => 500], $template);
@@ -421,6 +433,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result1 = $this->validator->validate(['password' => 'short'], $template);
@@ -447,6 +460,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $config = $this->validator->applyDefaults(['host' => 'redis'], $template);
@@ -471,6 +485,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result = $this->validator->validateAndApplyDefaults(['host' => 'localhost'], $template);
@@ -495,6 +510,7 @@ describe('ServiceConfigValidator', function () {
                 ],
             ],
             dockerConfig: [],
+            required: false,
         );
 
         $result = $this->validator->validate([

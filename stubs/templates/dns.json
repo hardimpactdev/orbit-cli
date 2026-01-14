@@ -3,6 +3,7 @@
     "label": "dnsmasq DNS",
     "description": "Lightweight DNS server for local development",
     "category": "infrastructure",
+    "required": true,
     "versions": ["latest", "2.90", "2.89"],
     "configSchema": {
         "required": ["port"],

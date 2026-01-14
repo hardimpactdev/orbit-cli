@@ -69,6 +69,7 @@ class ServiceListCommand extends Command
     protected function listAvailable(ServiceTemplateLoader $templateLoader): int
     {
         $templates = $templateLoader->loadAll();
+        $names = array_keys($templates);
 
         if ($this->wantsJson()) {
             $data = [];
@@ -83,9 +84,13 @@ class ServiceListCommand extends Command
                 ];
             }
 
-            return $this->outputJsonSuccess([
-                'templates' => $data,
-                'total' => count($templates),
+            return $this->outputJson([
+                'success' => true,
+                'available' => $names,
+                'data' => [
+                    'templates' => $data,
+                    'total' => count($templates),
+                ],
             ]);
         }
 
