@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->configManager->shouldReceive('getTld')->andReturn('test');
     $this->configManager->shouldReceive('getConfigPath')->andReturn('/tmp/.config/launchpad');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
-    $this->configManager->shouldReceive('get')->with('orchestrator.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
+    $this->configManager->shouldReceive('get')->with('sequence.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
     $this->configManager->shouldReceive('get')->with('paths', [])->andReturn(['/tmp/projects']);
     $this->app->instance(ConfigManager::class, $this->configManager);

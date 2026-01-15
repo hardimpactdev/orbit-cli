@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Tool;
 
 class ProjectDeleteTool extends Tool
 {
-    protected string $description = 'Delete a project with cascade deletion of GitHub repo and orchestrator entry';
+    protected string $description = 'Delete a project with cascade deletion of GitHub repo and sequence entry';
 
     /**
      * @return array<string, mixed>

@@ -108,7 +108,7 @@ networks:
     protected function generateVibeKanbanMount(): string
     {
         // Mount the vibe-kanban data directory for SQLite database access
-        // Used by orchestrator to create/manage VibeKanban projects
+        // Used by sequence to create/manage VibeKanban projects
         $vibeKanbanPath = $this->expandPath('~/.local/share/vibe-kanban');
 
         if (File::isDirectory($vibeKanbanPath)) {

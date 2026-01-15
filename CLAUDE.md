@@ -5,6 +5,7 @@ A Laravel Zero CLI tool for managing local PHP development environments using Do
 ## Project Overview
 
 Launchpad sets up a complete local development environment with:
+
 - **Caddy** - Web server with automatic HTTPS (TLS internal)
 - **PHP 8.4 & 8.5** - Multiple PHP versions via PHP-FPM on host
 - **PostgreSQL** - Database server
@@ -55,7 +56,7 @@ app/
     ├── SiteScanner.php          # Scans paths for PHP projects
     ├── WorktreeService.php      # Git worktree management
     ├── DatabaseService.php      # SQLite for PHP overrides
-    ├── McpClient.php            # MCP client for orchestrator
+    ├── McpClient.php            # MCP client for sequence
     └── ReverbBroadcaster.php    # WebSocket broadcasting
 ```
 
@@ -63,35 +64,35 @@ app/
 
 All commands support `--json` flag for machine-readable output.
 
-| Command | Description |
-|---------|-------------|
-| `launchpad init` | Initialize configuration |
-| `launchpad start` | Start all services |
-| `launchpad stop` | Stop all services |
-| `launchpad restart` | Restart all services |
-| `launchpad status` | Show service status |
-| `launchpad sites` | List all sites |
-| `launchpad php <site> <version>` | Set PHP version for a site |
-| `launchpad php <site> --reset` | Reset to default PHP version |
-| `launchpad logs [service]` | View service logs |
-| `launchpad trust` | Trust the local CA certificate |
-| `launchpad upgrade` | Upgrade to the latest version |
-| `launchpad upgrade --check` | Check for available updates |
-| `launchpad worktrees [site]` | List git worktrees with subdomains |
-| `launchpad worktree:refresh` | Refresh and auto-link new worktrees |
-| `launchpad worktree:unlink <site> <worktree>` | Unlink worktree from site |
-| `launchpad project:list` | List all directories in scan paths |
-| `launchpad project:scan` | Scan for git repos in configured paths |
-| `launchpad project:update [path]` | Update project (git pull + deps) |
-| `launchpad project:delete <slug>` | Delete project with cascade |
-| `launchpad provision:status <slug>` | Check provisioning status |
-| `launchpad config:migrate` | Migrate config.json to SQLite |
-| `launchpad reverb:setup` | Setup Reverb WebSocket service |
-| `launchpad migrate:to-fpm` | Migrate from FrankenPHP to PHP-FPM architecture |
-| `launchpad horizon:status` | Check Horizon service status |
-| `launchpad horizon:start` | Start Horizon service |
-| `launchpad horizon:stop` | Stop Horizon service |
-| `launchpad horizon:restart` | Restart Horizon service |
+| Command                                       | Description                                     |
+| --------------------------------------------- | ----------------------------------------------- |
+| `launchpad init`                              | Initialize configuration                        |
+| `launchpad start`                             | Start all services                              |
+| `launchpad stop`                              | Stop all services                               |
+| `launchpad restart`                           | Restart all services                            |
+| `launchpad status`                            | Show service status                             |
+| `launchpad sites`                             | List all sites                                  |
+| `launchpad php <site> <version>`              | Set PHP version for a site                      |
+| `launchpad php <site> --reset`                | Reset to default PHP version                    |
+| `launchpad logs [service]`                    | View service logs                               |
+| `launchpad trust`                             | Trust the local CA certificate                  |
+| `launchpad upgrade`                           | Upgrade to the latest version                   |
+| `launchpad upgrade --check`                   | Check for available updates                     |
+| `launchpad worktrees [site]`                  | List git worktrees with subdomains              |
+| `launchpad worktree:refresh`                  | Refresh and auto-link new worktrees             |
+| `launchpad worktree:unlink <site> <worktree>` | Unlink worktree from site                       |
+| `launchpad project:list`                      | List all directories in scan paths              |
+| `launchpad project:scan`                      | Scan for git repos in configured paths          |
+| `launchpad project:update [path]`             | Update project (git pull + deps)                |
+| `launchpad project:delete <slug>`             | Delete project with cascade                     |
+| `launchpad provision:status <slug>`           | Check provisioning status                       |
+| `launchpad config:migrate`                    | Migrate config.json to SQLite                   |
+| `launchpad reverb:setup`                      | Setup Reverb WebSocket service                  |
+| `launchpad migrate:to-fpm`                    | Migrate from FrankenPHP to PHP-FPM architecture |
+| `launchpad horizon:status`                    | Check Horizon service status                    |
+| `launchpad horizon:start`                     | Start Horizon service                           |
+| `launchpad horizon:stop`                      | Stop Horizon service                            |
+| `launchpad horizon:restart`                   | Restart Horizon service                         |
 
 ## JSON Output Format
 
@@ -116,14 +117,14 @@ Launchpad automatically detects git worktrees and creates subdomains for them:
 
 Defined in `App\Enums\ExitCode`:
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Docker not running |
-| 4 | Service failed to start |
-| 5 | Configuration error |
+| Code | Meaning                 |
+| ---- | ----------------------- |
+| 0    | Success                 |
+| 1    | General error           |
+| 2    | Invalid arguments       |
+| 3    | Docker not running      |
+| 4    | Service failed to start |
+| 5    | Configuration error     |
 
 ## Key Patterns
 
@@ -172,9 +173,9 @@ User config is stored at `~/.config/launchpad/config.json`:
 
 ```json
 {
-  "paths": ["/home/user/projects"],
-  "tld": "test",
-  "default_php_version": "8.3"
+    "paths": ["/home/user/projects"],
+    "tld": "test",
+    "default_php_version": "8.3"
 }
 ```
 
@@ -199,13 +200,13 @@ Use `config:migrate` to migrate legacy `sites` overrides from config.json to SQL
 
 ### MCP Integration
 
-The CLI communicates with the orchestrator via `McpClient` for project management operations. Configure the orchestrator URL in config.json:
+The CLI communicates with sequence via `McpClient` for project management operations. Configure the sequence URL in config.json:
 
 ```json
 {
-  "orchestrator": {
-    "url": "http://localhost:8000"
-  }
+    "sequence": {
+        "url": "http://localhost:8000"
+    }
 }
 ```
 
@@ -215,15 +216,16 @@ The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring b
 
 The following services run in Docker containers:
 
-| Container | Purpose |
-|-----------|---------|
-| `launchpad-dns` | Local DNS resolver (dnsmasq) |
-| `launchpad-postgres` | PostgreSQL database |
-| `launchpad-redis` | Redis cache |
-| `launchpad-mailpit` | Mail catcher |
-| `launchpad-reverb` | WebSocket server (Laravel Reverb) |
+| Container            | Purpose                           |
+| -------------------- | --------------------------------- |
+| `launchpad-dns`      | Local DNS resolver (dnsmasq)      |
+| `launchpad-postgres` | PostgreSQL database               |
+| `launchpad-redis`    | Redis cache                       |
+| `launchpad-mailpit`  | Mail catcher                      |
+| `launchpad-reverb`   | WebSocket server (Laravel Reverb) |
 
 **Services running on host (not containerized):**
+
 - **PHP-FPM**: Multiple pools at `~/.config/launchpad/php/php{version}.sock`
 - **Caddy**: Web server with automatic HTTPS
 - **Horizon**: Queue worker as systemd (Linux) or launchd (macOS) service
@@ -233,6 +235,7 @@ The following services run in Docker containers:
 PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces the previous FrankenPHP container-based architecture.
 
 ### Architecture Overview
+
 - PHP-FPM runs directly on the host OS (not containerized)
 - Caddy runs as a binary on the host
 - Horizon runs as a systemd/launchd service
@@ -240,21 +243,25 @@ PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces
 - Easier debugging and log access
 
 #### Services on Host
+
 - **PHP-FPM**: Runs as systemd (Linux) or Homebrew (macOS) service with custom pools per version
 - **Caddy**: Single Caddy binary on host (not containerized)
 - **Horizon**: Runs as systemd/launchd service
 
 #### Key Files
+
 - `~/.config/launchpad/php/php{version}.sock` - FPM sockets
 - `~/.config/launchpad/php/php{version}-fpm.conf` - Pool configs
 - `/etc/systemd/system/launchpad-horizon.service` - Horizon service (Linux)
 - `~/Library/LaunchAgents/com.launchpad.horizon.plist` - Horizon service (macOS)
 
 #### Platform Adapters
+
 - `LinuxAdapter` - Uses apt, Ondřej PPA, systemd
 - `MacAdapter` - Uses Homebrew, launchd
 
 #### Key Services
+
 - `PhpManager` - PHP-FPM version management
 - `CaddyManager` - Host Caddy lifecycle
 - `HorizonManager` - Horizon as system service
@@ -263,18 +270,17 @@ PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces
 
 ### Required
 
-| Dependency | macOS | Linux |
-|------------|-------|-------|
-| PHP >= 8.2 | Homebrew (shivammathur/php) | apt (Ondřej PPA) |
-| Docker | OrbStack (recommended) or Docker Desktop | docker.io |
-| Composer | Homebrew | apt |
-
+| Dependency | macOS                                    | Linux            |
+| ---------- | ---------------------------------------- | ---------------- |
+| PHP >= 8.2 | Homebrew (shivammathur/php)              | apt (Ondřej PPA) |
+| Docker     | OrbStack (recommended) or Docker Desktop | docker.io        |
+| Composer   | Homebrew                                 | apt              |
 
 ### Optional
 
-| Dependency | Purpose | macOS | Linux |
-|------------|---------|-------|-------|
-| dig | DNS debugging | Built-in | `apt install dnsutils` |
+| Dependency | Purpose       | macOS    | Linux                  |
+| ---------- | ------------- | -------- | ---------------------- |
+| dig        | DNS debugging | Built-in | `apt install dnsutils` |
 
 The `launchpad init` command will check for and offer to install missing prerequisites automatically.
 
@@ -282,11 +288,11 @@ The `launchpad init` command will check for and offer to install missing prerequ
 
 **OrbStack is recommended** over Docker Desktop for macOS:
 
-| Metric | OrbStack | Docker Desktop |
-|--------|----------|----------------|
-| Startup | 2 seconds | 20-30 seconds |
-| RAM usage | ~1GB | ~6GB |
-| File I/O | 2-10x faster | Baseline |
+| Metric    | OrbStack     | Docker Desktop |
+| --------- | ------------ | -------------- |
+| Startup   | 2 seconds    | 20-30 seconds  |
+| RAM usage | ~1GB         | ~6GB           |
+| File I/O  | 2-10x faster | Baseline       |
 
 OrbStack is a drop-in replacement - all `docker` commands work identically.
 
@@ -306,9 +312,9 @@ Launchpad uses a Docker container (`launchpad-dns`) running dnsmasq to resolve c
 
 ### Setup
 
-| Platform | Setup |
-|----------|-------|
-| **macOS** | `sudo networksetup -setdnsservers Wi-Fi 127.0.0.1` |
+| Platform  | Setup                                                                           |
+| --------- | ------------------------------------------------------------------------------- |
+| **macOS** | `sudo networksetup -setdnsservers Wi-Fi 127.0.0.1`                              |
 | **Linux** | Disable `systemd-resolved` stub listener, point `/etc/resolv.conf` to 127.0.0.1 |
 
 The `launchpad init` command guides through DNS setup and detects existing dnsmasq installations.
@@ -329,14 +335,15 @@ sudo lsof -i :53
 
 ### Config
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `tld` | `test` | Top-level domain for sites |
+| Setting   | Default     | Description                   |
+| --------- | ----------- | ----------------------------- |
+| `tld`     | `test`      | Top-level domain for sites    |
 | `host_ip` | `127.0.0.1` | IP address for TLD resolution |
 
 ## Development
 
 ### Running the CLI
+
 ```bash
 # From project root
 php launchpad <command>
@@ -347,14 +354,15 @@ php launchpad <command>
 
 ### Quality Tools
 
-| Tool | Command | Description |
-|------|---------|-------------|
-| PHPStan (Larastan) | `./vendor/bin/phpstan analyse` | Static analysis at level 5 |
-| Rector | `./vendor/bin/rector` | Automated refactoring (PHP 8.2 rules) |
-| Pint | `./vendor/bin/pint` | Laravel code style formatting |
-| Pest | `./vendor/bin/pest` | Test suite (41 tests, 128 assertions) |
+| Tool               | Command                        | Description                           |
+| ------------------ | ------------------------------ | ------------------------------------- |
+| PHPStan (Larastan) | `./vendor/bin/phpstan analyse` | Static analysis at level 5            |
+| Rector             | `./vendor/bin/rector`          | Automated refactoring (PHP 8.2 rules) |
+| Pint               | `./vendor/bin/pint`            | Laravel code style formatting         |
+| Pest               | `./vendor/bin/pest`            | Test suite (41 tests, 128 assertions) |
 
 ### Running All Checks
+
 ```bash
 ./vendor/bin/rector --dry-run
 ./vendor/bin/pint --test
@@ -366,15 +374,16 @@ php launchpad <command>
 
 Tests are located in `tests/` directory:
 
-| Category | Tests |
-|----------|-------|
+| Category | Tests                                                                                                           |
+| -------- | --------------------------------------------------------------------------------------------------------------- |
 | Commands | StatusCommand, SitesCommand, PhpCommand, StartCommand, StopCommand, RestartCommand, LogsCommand, UpgradeCommand |
-| Services | SiteScanner, ConfigManager, CaddyfileGenerator, PhpComposeGenerator |
-| Enums | ExitCode |
+| Services | SiteScanner, ConfigManager, CaddyfileGenerator, PhpComposeGenerator                                             |
+| Enums    | ExitCode                                                                                                        |
 
 ### Git Hooks
 
 Pre-commit hook runs all quality checks. Enable with:
+
 ```bash
 git config core.hooksPath .githooks
 ```
@@ -385,6 +394,7 @@ git config core.hooksPath .githooks
 - **Release Workflow** (`.github/workflows/release.yml`) - Builds PHAR on tag push
 
 ### Testing JSON Output
+
 ```bash
 php launchpad status --json | jq .
 php launchpad sites --json | jq '.data.sites'
@@ -417,7 +427,6 @@ This CLI is designed to be controlled by the **launchpad-desktop** NativePHP app
 
 The `--json` flag ensures machine-readable output for programmatic control.
 
-
 ## MCP Server
 
 Launchpad includes a Model Context Protocol (MCP) server that enables AI tools to understand infrastructure and configure Laravel projects correctly (preventing redundant Redis/PostgreSQL/Mailpit installations).
@@ -425,42 +434,50 @@ Launchpad includes a Model Context Protocol (MCP) server that enables AI tools t
 **Transport:** stdio via `launchpad mcp:start launchpad` (TLD-independent, works when containers are down)
 
 **Client Configuration** (`~/.mcp.json`):
+
 ```json
-{"mcpServers": {"launchpad": {"command": "launchpad", "args": ["mcp:start", "launchpad"]}}}
+{
+    "mcpServers": {
+        "launchpad": {
+            "command": "launchpad",
+            "args": ["mcp:start", "launchpad"]
+        }
+    }
+}
 ```
 
 **File Structure:** `app/Mcp/{Servers,Tools,Resources,Prompts}/`
 
 ### Tools
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `launchpad_status` | Get service status, health, site count | None |
-| `launchpad_start` | Start all Docker services | None |
-| `launchpad_stop` | Stop all Docker services | None |
-| `launchpad_restart` | Restart all Docker services | None |
-| `launchpad_sites` | List all registered sites | None |
-| `launchpad_php` | Get/set PHP version for a site | `site`, `action`, `version?` |
-| `launchpad_project_create` | Create a new project | `name`, `template?`, `visibility?` |
-| `launchpad_project_delete` | Delete a project | `slug` |
-| `launchpad_logs` | Get service logs | `service`, `lines?` |
-| `launchpad_worktrees` | List git worktrees | `site?` |
+| Tool                       | Description                            | Parameters                         |
+| -------------------------- | -------------------------------------- | ---------------------------------- |
+| `launchpad_status`         | Get service status, health, site count | None                               |
+| `launchpad_start`          | Start all Docker services              | None                               |
+| `launchpad_stop`           | Stop all Docker services               | None                               |
+| `launchpad_restart`        | Restart all Docker services            | None                               |
+| `launchpad_sites`          | List all registered sites              | None                               |
+| `launchpad_php`            | Get/set PHP version for a site         | `site`, `action`, `version?`       |
+| `launchpad_project_create` | Create a new project                   | `name`, `template?`, `visibility?` |
+| `launchpad_project_delete` | Delete a project                       | `slug`                             |
+| `launchpad_logs`           | Get service logs                       | `service`, `lines?`                |
+| `launchpad_worktrees`      | List git worktrees                     | `site?`                            |
 
 ### Resources
 
-| URI | Description |
-|-----|-------------|
-| `launchpad://infrastructure` | All Docker services with status, health, ports |
-| `launchpad://config` | TLD, default PHP version, paths, enabled services |
+| URI                               | Description                                                |
+| --------------------------------- | ---------------------------------------------------------- |
+| `launchpad://infrastructure`      | All Docker services with status, health, ports             |
+| `launchpad://config`              | TLD, default PHP version, paths, enabled services          |
 | `launchpad://env-template/{type}` | .env templates (database, redis, mail, broadcasting, full) |
-| `launchpad://sites` | All sites with domains, PHP versions, paths |
+| `launchpad://sites`               | All sites with domains, PHP versions, paths                |
 
 ### Prompts
 
-| Prompt | Description |
-|--------|-------------|
+| Prompt                  | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
 | `configure-laravel-env` | Guide for configuring .env for Launchpad infrastructure |
-| `setup-horizon` | Guide for setting up Laravel Horizon with Launchpad |
+| `setup-horizon`         | Guide for setting up Laravel Horizon with Launchpad     |
 
 ### Testing
 
@@ -469,15 +486,14 @@ launchpad mcp:inspector launchpad     # Interactive testing UI
 ./vendor/bin/pest tests/Feature/Mcp   # Run MCP tests (47 tests)
 ```
 
-
 ## Project Provisioning
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
+| Command          | Description                                  |
+| ---------------- | -------------------------------------------- |
 | `project:create` | Create a new project with async provisioning |
-| `provision` | Background command that provisions a project |
+| `provision`      | Background command that provisions a project |
 
 ### project:create
 
@@ -491,19 +507,21 @@ launchpad project:create my-app \
 ```
 
 **Options:**
+
 - `--template` - GitHub template repository (user/repo format)
 - `--clone-url` - Existing repo URL to clone (alternative to template)
 - `--visibility` - Repository visibility: private (default) or public
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "project_slug": "my-app",
-    "status": "provisioning",
-    "message": "Project provisioning started in background"
-  }
+    "success": true,
+    "data": {
+        "project_slug": "my-app",
+        "status": "provisioning",
+        "message": "Project provisioning started in background"
+    }
 }
 ```
 
@@ -512,11 +530,12 @@ launchpad project:create my-app \
 When called via API (CreateProjectJob), runs in Horizon queue on the HOST. When called directly via CLI, runs synchronously. Broadcasts status updates via Reverb WebSocket.
 
 **Status Flow:**
+
 1. `provisioning` - Initial state
 2. `creating_repo` - Creating GitHub repository from template
 3. `cloning` - Cloning repository
 4. `setting_up` - Running composer install, npm install, env setup
-5. `finalizing` - Registering with orchestrator
+5. `finalizing` - Registering with sequence
 6. `ready` - Complete (broadcast BEFORE Caddy reload to avoid WebSocket disconnect)
 
 ### ReverbBroadcaster Service
@@ -532,23 +551,25 @@ $broadcaster->broadcast('provisioning', 'project.provision.status', [
 ```
 
 **Channels:**
+
 - `provisioning` - Global channel for all events
 - `project.{slug}` - Project-specific channel
 
 **Configuration** (~/.config/launchpad/config.json):
+
 ```json
 {
-  "reverb": {
-    "app_id": "launchpad",
-    "app_key": "launchpad-key",
-    "app_secret": "launchpad-secret",
-    "host": "reverb.ccc",
-    "port": 443,
-    "internal_port": 6001
-  },
-  "services": {
-    "reverb": { "enabled": true }
-  }
+    "reverb": {
+        "app_id": "launchpad",
+        "app_key": "launchpad-key",
+        "app_secret": "launchpad-secret",
+        "host": "reverb.ccc",
+        "port": 443,
+        "internal_port": 6001
+    },
+    "services": {
+        "reverb": { "enabled": true }
+    }
 }
 ```
 
@@ -570,6 +591,7 @@ $caddyfileGenerator->reloadPhp();
 ```
 
 **Benefits:**
+
 - URL becomes accessible immediately (returns 503 until setup completes)
 - SSL certificate generation starts during composer/npm install
 - ~2-3 second improvement in perceived provisioning time
@@ -578,32 +600,32 @@ $caddyfileGenerator->reloadPhp();
 
 The provisioning broadcasts granular status updates:
 
-| Status | Description |
-|--------|-------------|
-| `provisioning` | Initial state |
-| `creating_repo` | Creating GitHub repository from template |
-| `cloning` | Cloning repository to ~/projects/{slug} |
-| `setting_up` | Early Caddy reload + initial env setup |
-| `installing_composer` | Running composer install |
-| `installing_npm` | Running bun install |
-| `building` | Running bun run build |
-| `finalizing` | Database migrations + orchestrator registration |
-| `ready` | Complete - project ready to use |
-| `failed` | Error occurred (includes error message) |
+| Status                | Description                                 |
+| --------------------- | ------------------------------------------- |
+| `provisioning`        | Initial state                               |
+| `creating_repo`       | Creating GitHub repository from template    |
+| `cloning`             | Cloning repository to ~/projects/{slug}     |
+| `setting_up`          | Early Caddy reload + initial env setup      |
+| `installing_composer` | Running composer install                    |
+| `installing_npm`      | Running bun install                         |
+| `building`            | Running bun run build                       |
+| `finalizing`          | Database migrations + sequence registration |
+| `ready`               | Complete - project ready to use             |
+| `failed`              | Error occurred (includes error message)     |
 
 ### Timing Benchmarks (liftoff-starterkit)
 
-| Step | Time |
-|------|------|
-| GitHub repo + propagation | ~7s |
-| Git clone | ~2s |
-| Caddy early reload | ~1s |
-| Composer install | ~4s |
-| Bun install | ~1s |
-| Bun build | ~7s |
-| Env/Key/Migrate | ~1s |
-| Orchestrator registration | ~2s |
-| **Total** | **~22-25s** |
+| Step                      | Time        |
+| ------------------------- | ----------- |
+| GitHub repo + propagation | ~7s         |
+| Git clone                 | ~2s         |
+| Caddy early reload        | ~1s         |
+| Composer install          | ~4s         |
+| Bun install               | ~1s         |
+| Bun build                 | ~7s         |
+| Env/Key/Migrate           | ~1s         |
+| Sequence registration     | ~2s         |
+| **Total**                 | **~22-25s** |
 
 ## Testing Provisioning
 
@@ -621,15 +643,14 @@ See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-p
 
 ## Troubleshooting Provisioning
 
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Bun install hangs | Non-TTY progress output blocks | CLI uses CI=1 and --no-progress flags (v0.0.17+) |
-| Bun timeout (180s) | Peer dependency conflicts | CLI auto-falls back to `npm install --legacy-peer-deps` |
-| Provisioning > 30s | Check bun hang, network, deps | `timeout 30 launchpad provision test-project ...` |
-| SQLite instead of pgsql | Provisioning failed early | `sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env` |
+| Problem                 | Cause                          | Solution                                                    |
+| ----------------------- | ------------------------------ | ----------------------------------------------------------- |
+| Bun install hangs       | Non-TTY progress output blocks | CLI uses CI=1 and --no-progress flags (v0.0.17+)            |
+| Bun timeout (180s)      | Peer dependency conflicts      | CLI auto-falls back to `npm install --legacy-peer-deps`     |
+| Provisioning > 30s      | Check bun hang, network, deps  | `timeout 30 launchpad provision test-project ...`           |
+| SQLite instead of pgsql | Provisioning failed early      | `sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env` |
 
 **SSH Non-TTY:** Always use `--no-progress` for bun in non-interactive contexts (SSH, Horizon jobs).
-
 
 ## Launchpad Web App & Queue Processing
 
@@ -638,16 +659,17 @@ Web app (`~/.config/launchpad/web/`) provides API for project management. Horizo
 **Key Concept:** Web app (via PHP-FPM) and Horizon both run on the host. They connect to Docker services via localhost (ports exposed to host).
 
 **Important .env settings:** Since Horizon runs on host (not in Docker), use `localhost` for service hosts:
+
 - `REDIS_HOST=localhost` (NOT `launchpad-redis`)
 - `REVERB_HOST=localhost` (NOT `launchpad-reverb`)
 
 ### API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/projects` | POST | Create project (dispatches CreateProjectJob) |
-| `/api/projects` | GET | List all projects |
-| `/api/status` | GET | Get launchpad status |
+| Endpoint        | Method | Description                                  |
+| --------------- | ------ | -------------------------------------------- |
+| `/api/projects` | POST   | Create project (dispatches CreateProjectJob) |
+| `/api/projects` | GET    | List all projects                            |
+| `/api/status`   | GET    | Get launchpad status                         |
 
 ### Horizon Commands
 
@@ -668,7 +690,6 @@ launchctl list | grep horizon                         # Check Horizon running (m
 redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default # Check pending jobs
 tail -f ~/.config/launchpad/web/storage/logs/laravel.log  # View logs
 ```
-
 
 ## PHP-FPM Permissions
 
@@ -717,13 +738,14 @@ app/
 
 ### Core Components
 
-| Component | Purpose |
-|-----------|---------|
-| `ProvisionContext` | Immutable DTO with slug, projectPath, drivers, options |
-| `StepResult` | Action result: `StepResult::success()` or `StepResult::failed('msg')` |
-| `ProvisionLogger` | Logs to file, command output, and WebSocket |
+| Component          | Purpose                                                               |
+| ------------------ | --------------------------------------------------------------------- |
+| `ProvisionContext` | Immutable DTO with slug, projectPath, drivers, options                |
+| `StepResult`       | Action result: `StepResult::success()` or `StepResult::failed('msg')` |
+| `ProvisionLogger`  | Logs to file, command output, and WebSocket                           |
 
 **Action signature:**
+
 ```php
 final readonly class MyAction {
     public function handle(ProvisionContext $context, ProvisionLogger $logger): StepResult
@@ -734,22 +756,22 @@ Log files: `~/.config/launchpad/logs/provision/{slug}.log`
 
 ### Available Actions
 
-| Action | Purpose | Broadcasts |
-|--------|---------|------------|
-| `CreateGitHubRepository` | Create repo from template | `creating_repo` |
-| `ForkRepository` | Fork an existing repository | `forking` |
-| `CloneRepository` | Clone git repository | `cloning` |
-| `InstallComposerDependencies` | Run composer install | `installing_composer` |
-| `InstallNodeDependencies` | Run npm/bun/yarn/pnpm install | `installing_npm` |
-| `BuildAssets` | Run npm/bun build | `building` |
-| `ConfigureEnvironment` | Set up .env file with drivers | - |
-| `CreateDatabase` | Create PostgreSQL database | - |
-| `GenerateAppKey` | Run php artisan key:generate | - |
-| `RunMigrations` | Run php artisan migrate | - |
-| `RunPostInstallScripts` | Run composer scripts | - |
-| `ConfigureTrustedProxies` | Configure Laravel 11+ proxies | - |
-| `SetPhpVersion` | Detect and set PHP version | - |
-| `RestartPhpContainer` | Restart PHP-FPM container | - |
+| Action                        | Purpose                       | Broadcasts            |
+| ----------------------------- | ----------------------------- | --------------------- |
+| `CreateGitHubRepository`      | Create repo from template     | `creating_repo`       |
+| `ForkRepository`              | Fork an existing repository   | `forking`             |
+| `CloneRepository`             | Clone git repository          | `cloning`             |
+| `InstallComposerDependencies` | Run composer install          | `installing_composer` |
+| `InstallNodeDependencies`     | Run npm/bun/yarn/pnpm install | `installing_npm`      |
+| `BuildAssets`                 | Run npm/bun build             | `building`            |
+| `ConfigureEnvironment`        | Set up .env file with drivers | -                     |
+| `CreateDatabase`              | Create PostgreSQL database    | -                     |
+| `GenerateAppKey`              | Run php artisan key:generate  | -                     |
+| `RunMigrations`               | Run php artisan migrate       | -                     |
+| `RunPostInstallScripts`       | Run composer scripts          | -                     |
+| `ConfigureTrustedProxies`     | Configure Laravel 11+ proxies | -                     |
+| `SetPhpVersion`               | Detect and set PHP version    | -                     |
+| `RestartPhpContainer`         | Restart PHP-FPM container     | -                     |
 
 ### Using Actions
 
@@ -781,13 +803,13 @@ stubs/templates/           # Service template definitions (JSON)
 
 ### Key Components
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `ServiceTemplate` | `app/Data/ServiceTemplate.php` | Immutable DTO for template data |
-| `ServiceTemplateLoader` | `app/Services/ServiceTemplateLoader.php` | Loads/caches JSON templates |
-| `ServiceConfigValidator` | `app/Services/ServiceConfigValidator.php` | Validates config against schema |
-| `ServiceManager` | `app/Services/ServiceManager.php` | Enables/disables/configures services |
-| `ComposeGenerator` | `app/Services/ComposeGenerator.php` | Generates docker-compose.yaml |
+| Component                | File                                      | Purpose                              |
+| ------------------------ | ----------------------------------------- | ------------------------------------ |
+| `ServiceTemplate`        | `app/Data/ServiceTemplate.php`            | Immutable DTO for template data      |
+| `ServiceTemplateLoader`  | `app/Services/ServiceTemplateLoader.php`  | Loads/caches JSON templates          |
+| `ServiceConfigValidator` | `app/Services/ServiceConfigValidator.php` | Validates config against schema      |
+| `ServiceManager`         | `app/Services/ServiceManager.php`         | Enables/disables/configures services |
+| `ComposeGenerator`       | `app/Services/ComposeGenerator.php`       | Generates docker-compose.yaml        |
 
 ### Service Template Format
 
@@ -814,8 +836,14 @@ Each service is defined in `stubs/templates/{name}.json`:
             "environment": {
                 "type": "object",
                 "properties": {
-                    "POSTGRES_USER": { "type": "string", "default": "launchpad" },
-                    "POSTGRES_PASSWORD": { "type": "string", "default": "secret" }
+                    "POSTGRES_USER": {
+                        "type": "string",
+                        "default": "launchpad"
+                    },
+                    "POSTGRES_PASSWORD": {
+                        "type": "string",
+                        "default": "secret"
+                    }
                 }
             }
         }
@@ -840,42 +868,42 @@ Each service is defined in `stubs/templates/{name}.json`:
 
 ### Template Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Internal identifier (filename without .json) |
-| `label` | string | Human-readable display name |
-| `description` | string | Service description |
-| `category` | string | Category for grouping (database, cache, mail, etc.) |
-| `versions` | string[] | Available versions (first is default) |
-| `required` | boolean | If true, service cannot be disabled |
-| `dependsOn` | string[] | Services that must be enabled first |
-| `configSchema` | object | JSON Schema for configuration validation |
-| `dockerConfig` | object | Docker container configuration |
+| Field          | Type     | Description                                         |
+| -------------- | -------- | --------------------------------------------------- |
+| `name`         | string   | Internal identifier (filename without .json)        |
+| `label`        | string   | Human-readable display name                         |
+| `description`  | string   | Service description                                 |
+| `category`     | string   | Category for grouping (database, cache, mail, etc.) |
+| `versions`     | string[] | Available versions (first is default)               |
+| `required`     | boolean  | If true, service cannot be disabled                 |
+| `dependsOn`    | string[] | Services that must be enabled first                 |
+| `configSchema` | object   | JSON Schema for configuration validation            |
+| `dockerConfig` | object   | Docker container configuration                      |
 
 ### Configuration Schema
 
 The `configSchema` uses JSON Schema format with these supported validators:
 
-| Validator | Type | Description |
-|-----------|------|-------------|
-| `type` | string | Data type: `number`, `string`, `boolean`, `object`, `array` |
-| `default` | mixed | Default value if not provided |
-| `required` | string[] | Fields that must be present |
-| `minimum` | number | Minimum numeric value |
-| `maximum` | number | Maximum numeric value |
-| `minLength` | number | Minimum string length |
-| `maxLength` | number | Maximum string length |
-| `pattern` | string | Regex pattern for strings |
-| `enum` | array | Allowed values |
+| Validator   | Type     | Description                                                 |
+| ----------- | -------- | ----------------------------------------------------------- |
+| `type`      | string   | Data type: `number`, `string`, `boolean`, `object`, `array` |
+| `default`   | mixed    | Default value if not provided                               |
+| `required`  | string[] | Fields that must be present                                 |
+| `minimum`   | number   | Minimum numeric value                                       |
+| `maximum`   | number   | Maximum numeric value                                       |
+| `minLength` | number   | Minimum string length                                       |
+| `maxLength` | number   | Maximum string length                                       |
+| `pattern`   | string   | Regex pattern for strings                                   |
+| `enum`      | array    | Allowed values                                              |
 
 ### Docker Config Variables
 
 The `dockerConfig` section supports variable interpolation:
 
-| Variable | Description |
-|----------|-------------|
-| `${version}` | Selected service version from `services.yaml` |
-| `${port}` | Configured port from `services.yaml` |
+| Variable       | Description                                                         |
+| -------------- | ------------------------------------------------------------------- |
+| `${version}`   | Selected service version from `services.yaml`                       |
+| `${port}`      | Configured port from `services.yaml`                                |
 | `${data_path}` | Data directory path (default: `~/.config/launchpad/data/{service}`) |
 
 ### User Configuration (services.yaml)
@@ -884,42 +912,42 @@ Users configure services in `~/.config/launchpad/services.yaml`:
 
 ```yaml
 services:
-  postgres:
-    enabled: true
-    version: "17"
-    port: 5432
-    environment:
-      POSTGRES_USER: launchpad
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: launchpad
+    postgres:
+        enabled: true
+        version: "17"
+        port: 5432
+        environment:
+            POSTGRES_USER: launchpad
+            POSTGRES_PASSWORD: secret
+            POSTGRES_DB: launchpad
 
-  redis:
-    enabled: true
-    version: "7.4"
-    port: 6379
-    maxmemory: 256mb
-    persistence: true
+    redis:
+        enabled: true
+        version: "7.4"
+        port: 6379
+        maxmemory: 256mb
+        persistence: true
 
-  mailpit:
-    enabled: true
-    version: latest
-    smtp_port: 1025
-    http_port: 8025
+    mailpit:
+        enabled: true
+        version: latest
+        smtp_port: 1025
+        http_port: 8025
 
-  reverb:
-    enabled: false
+    reverb:
+        enabled: false
 ```
 
 ### Service Commands
 
-| Command | Description |
-|---------|-------------|
-| `launchpad service:list` | List all services with status |
-| `launchpad service:list --available` | List available templates |
-| `launchpad service:enable <name>` | Enable a service |
-| `launchpad service:disable <name>` | Disable a service |
-| `launchpad service:configure <name> --set key=value` | Configure a service |
-| `launchpad service:info <name>` | Show service details |
+| Command                                              | Description                   |
+| ---------------------------------------------------- | ----------------------------- |
+| `launchpad service:list`                             | List all services with status |
+| `launchpad service:list --available`                 | List available templates      |
+| `launchpad service:enable <name>`                    | Enable a service              |
+| `launchpad service:disable <name>`                   | Disable a service             |
+| `launchpad service:configure <name> --set key=value` | Configure a service           |
+| `launchpad service:info <name>`                      | Show service details          |
 
 ### Examples
 
@@ -949,14 +977,14 @@ launchpad service:info postgres --json
 
 ### Service Categories
 
-| Category | Services |
-|----------|----------|
-| `database` | postgres, mysql |
-| `cache` | redis |
-| `mail` | mailpit |
-| `search` | meilisearch |
-| `websocket` | reverb |
-| `core` | dns |
+| Category    | Services        |
+| ----------- | --------------- |
+| `database`  | postgres, mysql |
+| `cache`     | redis           |
+| `mail`      | mailpit         |
+| `search`    | meilisearch     |
+| `websocket` | reverb          |
+| `core`      | dns             |
 
 ## Testing
 
@@ -970,14 +998,13 @@ Tests use Pest PHP. Helper functions in `tests/Pest.php`:
 
 ### Test Files (Unit)
 
-| Test File | Coverage |
-|-----------|----------|
-| `ConfigureEnvironmentTest.php` | .env setup, drivers |
+| Test File                         | Coverage            |
+| --------------------------------- | ------------------- |
+| `ConfigureEnvironmentTest.php`    | .env setup, drivers |
 | `ConfigureTrustedProxiesTest.php` | Laravel 11+ proxies |
-| `DatabaseServiceTest.php` | PHP version storage |
-| `ProvisionContextTest.php` | Context DTO |
-| `StepResultTest.php` | Result DTO |
-
+| `DatabaseServiceTest.php`         | PHP version storage |
+| `ProvisionContextTest.php`        | Context DTO         |
+| `StepResultTest.php`              | Result DTO          |
 
 ## E2E Testing
 
@@ -998,16 +1025,19 @@ php tests/e2e-desktop-flow-test.php --keep
 ```
 
 **What it tests:**
+
 1. Creates a project via `POST /api/projects` (uses `hardimpactdev/liftoff-starterkit`)
 2. Tracks provisioning status until `ready` or `failed`
 3. Deletes the project via `DELETE /api/projects/{slug}`
 4. Tracks deletion status until `deleted` or `delete_failed`
 
 **Expected status flows:**
+
 - Provision: `provisioning -> creating_repo -> cloning -> setting_up -> installing_composer -> installing_npm -> building -> finalizing -> ready`
-- Deletion: `deleting -> removing_orchestrator -> removing_files -> deleted`
+- Deletion: `deleting -> removing_sequence -> removing_files -> deleted`
 
 **Requirements:**
+
 - Full launchpad stack running (Caddy, PHP, Redis, Horizon, Reverb)
 - Web app deployed at `~/.config/launchpad/web/`
 - Horizon processing jobs
@@ -1046,6 +1076,7 @@ $this->logger->broadcast('deleted');  // Connection already dropped!
 ### Broadcast Channels
 
 Events are broadcast to two channels:
+
 1. `provisioning` - Global channel for all events (desktop subscribes at connect time)
 2. `project.{slug}` - Project-specific channel (desktop subscribes when tracking a specific project)
 

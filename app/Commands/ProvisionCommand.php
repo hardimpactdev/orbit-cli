@@ -46,7 +46,7 @@ final class ProvisionCommand extends Command
         {--fork : Fork the repository instead of importing as new}
         {--json : Output as JSON (for programmatic use)}';
 
-    protected $description = 'Provision a project (create repo, clone, setup, register with orchestrator)';
+    protected $description = 'Provision a project (create repo, clone, setup, register with sequence)';
 
     private bool $aborted = false;
 
@@ -127,7 +127,7 @@ final class ProvisionCommand extends Command
             // Phase 4: Finalization
             $this->logger->broadcast('finalizing');
             if ($mcp->isConfigured()) {
-                $this->registerWithOrchestrator($mcp, $context->githubRepo);
+                $this->registerWithSequence($mcp, $context->githubRepo);
             }
 
             // Restart PHP container
@@ -451,9 +451,9 @@ final class ProvisionCommand extends Command
         $this->logger->info('Repository imported successfully');
     }
 
-    private function registerWithOrchestrator(McpClient $mcp, ?string $githubRepo): void
+    private function registerWithSequence(McpClient $mcp, ?string $githubRepo): void
     {
-        $this->logger->info('Registering project with orchestrator...');
+        $this->logger->info('Registering project with sequence...');
 
         try {
             $result = $mcp->callTool('project_add', [
@@ -462,12 +462,12 @@ final class ProvisionCommand extends Command
             ]);
 
             if (! ($result['success'] ?? false)) {
-                $this->logger->warn('Failed to register with orchestrator: '.($result['error'] ?? 'Unknown error'));
+                $this->logger->warn('Failed to register with sequence: '.($result['error'] ?? 'Unknown error'));
             } else {
-                $this->logger->info('Project registered with orchestrator');
+                $this->logger->info('Project registered with sequence');
             }
         } catch (\Exception $e) {
-            $this->logger->warn('Orchestrator registration failed: '.$e->getMessage());
+            $this->logger->warn('Sequence registration failed: '.$e->getMessage());
         }
     }
 }

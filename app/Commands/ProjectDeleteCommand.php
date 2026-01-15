@@ -27,7 +27,7 @@ final class ProjectDeleteCommand extends Command
         {--keep-db : Keep the database (do not drop it)}
         {--json : Output as JSON}';
 
-    protected $description = 'Delete a project and cascade to integrations (Orchestrator + VK + Linear + Database)';
+    protected $description = 'Delete a project and cascade to integrations (Sequence + VK + Linear + Database)';
 
     private ?DeletionLogger $logger = null;
 
@@ -80,9 +80,9 @@ final class ProjectDeleteCommand extends Command
         $meta = [];
         $warnings = [];
 
-        // Try to delete from orchestrator if configured (non-fatal if fails)
+        // Try to delete from sequence if configured (non-fatal if fails)
         if ($mcp->isConfigured()) {
-            $this->logger->broadcast('removing_orchestrator');
+            $this->logger->broadcast('removing_sequence');
             try {
                 $result = $mcp->callTool('delete-project', [
                     'slug' => $slug,
@@ -91,18 +91,18 @@ final class ProjectDeleteCommand extends Command
                     'delete_github_repo' => (bool) $this->option('delete-repo'),
                 ]);
                 $meta = $result['meta'] ?? [];
-                $this->logger->info('Deleted from orchestrator');
+                $this->logger->info('Deleted from sequence');
             } catch (\Throwable $e) {
                 $errorMsg = $e->getMessage();
                 // Truncate HTML error responses
                 if (str_contains($errorMsg, '<!DOCTYPE')) {
-                    $errorMsg = 'Orchestrator MCP endpoint returned 404';
+                    $errorMsg = 'Sequence MCP endpoint returned 404';
                 }
-                $warnings[] = 'Orchestrator delete failed: '.$errorMsg;
-                $this->logger->warn('Orchestrator delete failed (continuing with local delete)');
+                $warnings[] = 'Sequence delete failed: '.$errorMsg;
+                $this->logger->warn('Sequence delete failed (continuing with local delete)');
             }
         } else {
-            $this->logger->warn('Orchestrator not configured - skipping integration cleanup');
+            $this->logger->warn('Sequence not configured - skipping integration cleanup');
         }
 
         // Find local project directory

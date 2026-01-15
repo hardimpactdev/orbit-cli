@@ -11,7 +11,7 @@ beforeEach(function () {
 
 it('constructs base url from config', function () {
     $this->configManager->shouldReceive('get')
-        ->with('orchestrator.url', 'http://localhost:8000')
+        ->with('sequence.url', 'http://localhost:8000')
         ->andReturn('http://example.com');
 
     $client = new McpClient($this->configManager);
@@ -21,7 +21,7 @@ it('constructs base url from config', function () {
 
 it('calls tool and returns result', function () {
     $this->configManager->shouldReceive('get')
-        ->with('orchestrator.url', 'http://localhost:8000')
+        ->with('sequence.url', 'http://localhost:8000')
         ->andReturn('http://example.com');
 
     Http::fake([
@@ -47,7 +47,7 @@ it('calls tool and returns result', function () {
 
 it('throws exception on http failure', function () {
     $this->configManager->shouldReceive('get')
-        ->with('orchestrator.url', 'http://localhost:8000')
+        ->with('sequence.url', 'http://localhost:8000')
         ->andReturn('http://example.com');
 
     Http::fake([
@@ -62,7 +62,7 @@ it('throws exception on http failure', function () {
 
 it('throws exception on mcp error response', function () {
     $this->configManager->shouldReceive('get')
-        ->with('orchestrator.url', 'http://localhost:8000')
+        ->with('sequence.url', 'http://localhost:8000')
         ->andReturn('http://example.com');
 
     Http::fake([

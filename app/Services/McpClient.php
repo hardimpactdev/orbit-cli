@@ -15,9 +15,9 @@ final class McpClient
 
     public function __construct(ConfigManager $config)
     {
-        // CLI always calls localhost Orchestrator
-        $orchestratorUrl = $config->get('orchestrator.url', 'http://localhost:8000');
-        $this->baseUrl = rtrim((string) $orchestratorUrl, '/').'/mcp';
+        // CLI always calls localhost Sequence
+        $sequenceUrl = $config->get('sequence.url', 'http://localhost:8000');
+        $this->baseUrl = rtrim((string) $sequenceUrl, '/').'/mcp';
 
         // Check if URL uses .ccc TLD - resolve to localhost for background processes
         $parsedUrl = parse_url($this->baseUrl);
