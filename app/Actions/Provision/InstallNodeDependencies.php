@@ -81,10 +81,11 @@ final readonly class InstallNodeDependencies
         $logger->info('Installing dependencies with Bun...');
 
         try {
+            // Use 'bun ci' for CI/background environments - handles non-TTY properly
             $result = Process::env(['CI' => '1', 'PATH' => "{$home}/.bun/bin:".getenv('PATH')])
                 ->path($projectPath)
-                ->timeout(60)
-                ->run("{$bunPath} install --no-progress 2>&1");
+                ->timeout(120)
+                ->run("{$bunPath} ci 2>&1");
 
             if (! $result->successful()) {
                 return StepResult::failed('Bun install failed: '.substr($result->output(), 0, 500));
@@ -94,7 +95,7 @@ final readonly class InstallNodeDependencies
 
             return StepResult::success();
         } catch (ProcessTimedOutException) {
-            return StepResult::failed('Bun install timed out after 60 seconds');
+            return StepResult::failed('Bun install timed out after 120 seconds');
         }
     }
 
