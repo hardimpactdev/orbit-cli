@@ -11,6 +11,9 @@ Route::get('/health', [ProjectController::class, 'health']);
 
 // Status & Info
 Route::get('/status', [ApiController::class, 'status']);
+Route::post('/start', [ApiController::class, 'start']);
+Route::post('/stop', [ApiController::class, 'stop']);
+Route::post('/restart', [ApiController::class, 'restart']);
 Route::get('/sites', [ApiController::class, 'sites']);
 Route::get('/projects', [ApiController::class, 'projects']);
 Route::get('/config', [ApiController::class, 'config']);

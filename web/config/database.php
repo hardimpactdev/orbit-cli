@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'null'),
+    'default' => env('DB_CONNECTION', 'sqlite'),
 
     /*
     |--------------------------------------------------------------------------
@@ -23,7 +23,11 @@ return [
     */
 
     'connections' => [
-        // No database connections - app is stateless
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'foreign_key_constraints' => false,
+        ],
     ],
 
     /*
