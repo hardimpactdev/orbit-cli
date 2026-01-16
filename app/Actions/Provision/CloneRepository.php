@@ -31,17 +31,18 @@ final readonly class CloneRepository
         }
 
         $escapedPath = escapeshellarg($context->projectPath);
-        $result = Process::timeout(300)->run("git clone {$context->cloneUrl} {$escapedPath}");
+        $escapedRepo = escapeshellarg($context->cloneUrl);
+        $result = Process::timeout(300)->run("gh repo clone {$escapedRepo} {$escapedPath}");
 
         $output = trim($result->output());
         $errorOutput = trim($result->errorOutput());
 
-        $logger->log("git clone exit code: {$result->exitCode()}");
+        $logger->log("gh repo clone exit code: {$result->exitCode()}");
         if ($output) {
-            $logger->log("git clone stdout: {$output}");
+            $logger->log("gh repo clone stdout: {$output}");
         }
         if ($errorOutput) {
-            $logger->log("git clone stderr: {$errorOutput}");
+            $logger->log("gh repo clone stderr: {$errorOutput}");
         }
 
         if (! $result->successful()) {

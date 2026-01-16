@@ -45,11 +45,9 @@ final readonly class CreateGitHubRepository
         $logger->log('Waiting 3 seconds for GitHub propagation...');
         sleep(3);
 
-        $cloneUrl = "git@github.com:{$targetRepo}.git";
-
         return StepResult::success([
             'repo' => $targetRepo,
-            'cloneUrl' => $cloneUrl,
+            'cloneUrl' => $targetRepo,
         ]);
     }
 }

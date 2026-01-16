@@ -59,7 +59,7 @@ it('accepts all optional fields', function () {
         slug: 'my-project',
         projectPath: '/tmp/my-project',
         githubRepo: 'user/my-project',
-        cloneUrl: 'git@github.com:user/my-project.git',
+        cloneUrl: 'user/my-project',
         template: 'user/template',
         visibility: 'public',
         phpVersion: '8.4',
@@ -74,7 +74,7 @@ it('accepts all optional fields', function () {
     );
 
     expect($context->githubRepo)->toBe('user/my-project');
-    expect($context->cloneUrl)->toBe('git@github.com:user/my-project.git');
+    expect($context->cloneUrl)->toBe('user/my-project');
     expect($context->template)->toBe('user/template');
     expect($context->visibility)->toBe('public');
     expect($context->phpVersion)->toBe('8.4');

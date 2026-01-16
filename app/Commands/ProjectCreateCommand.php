@@ -67,12 +67,16 @@ final class ProjectCreateCommand extends Command
             return $this->failWithMessage("Failed to create directory: {$localPath}");
         }
 
-        // Determine clone URL
+        // Determine clone URL (owner/repo format for gh cli)
         $cloneUrl = null;
         if ($clone) {
-            $cloneUrl = str_starts_with($clone, 'git@') || str_starts_with($clone, 'https://')
-                ? $clone
-                : "git@github.com:{$clone}.git";
+            // Convert git@github.com:owner/repo.git or https URLs to owner/repo format
+            if (preg_match('/github\.com[:\\/]([^\\/]+\\/[^\\/\\s]+?)(?:\\.git)?$/', $clone, $matches)) {
+                $cloneUrl = $matches[1];
+            } else {
+                // Assume already in owner/repo format
+                $cloneUrl = str_replace('.git', '', $clone);
+            }
         }
 
         // Build provision command arguments

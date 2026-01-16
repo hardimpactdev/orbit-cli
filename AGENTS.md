@@ -6,6 +6,16 @@ This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get sta
 
 **Orbit CLI** - Local PHP dev environment powered by Docker. Supports both Linux and macOS.
 
+## Bundled Web App
+
+The `web/` directory contains a Laravel web app that is bundled with the CLI. This is the dashboard/API that powers the desktop app integration.
+
+- Source: `web/` in this repo
+- Installed to: `~/.config/orbit/web/` on user machines
+- The CLI copies `web/` during init/upgrade
+
+When making changes to the web app, edit files in `web/` - NOT in `~/.config/orbit/web/` (that's the installed copy).
+
 ## Quick Reference
 
 ```bash
@@ -17,6 +27,8 @@ bd sync               # Sync with git
 ```
 
 ## Quality Gates
+
+**IMPORTANT:** Every fix must have a test. After tests pass, release immediately.
 
 Run before every commit/release:
 

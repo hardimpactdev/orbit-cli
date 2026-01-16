@@ -47,7 +47,6 @@ final readonly class ForkRepository
         // Extract just the repo name from source
         $repoName = basename($sourceRepo);
         $forkRepo = "{$username}/{$repoName}";
-        $forkUrl = "git@github.com:{$forkRepo}.git";
 
         $logger->info("Repository forked to: {$forkRepo}");
 
@@ -57,7 +56,7 @@ final readonly class ForkRepository
 
         return StepResult::success([
             'repo' => $forkRepo,
-            'cloneUrl' => $forkUrl,
+            'cloneUrl' => $forkRepo,
         ]);
     }
 
