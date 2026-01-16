@@ -1,2 +1,2 @@
 #!/bin/bash
-exec $HOME/.config/herd-lite/bin/php $HOME/projects/launchpad-cli/launchpad "$@"
+exec $HOME/.config/herd-lite/bin/php $HOME/projects/orbit-cli/orbit "$@"

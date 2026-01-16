@@ -120,7 +120,7 @@ Located at `app/Jobs/CreateProjectJob.php`. Dispatched when a project is created
 The job MUST set the correct PATH for bun and other tools:
 
 ```php
-$home = $_SERVER['HOME'] ?? '/home/launchpad';
+$home = $_SERVER['HOME'] ?? '/home/orbit';
 $process = Process::timeout(900)->env([
     'HOME' => $home,
     'PATH' => "{$home}/.bun/bin:" .
@@ -130,7 +130,7 @@ $process = Process::timeout(900)->env([
 ]);
 ```
 
-**Common PATH Bug:** If you see `$home/home/launchpad/.bun/bin` in the PATH, the string interpolation is wrong. Use `{$home}` syntax, not `$home`.
+**Common PATH Bug:** If you see `$home/home/orbit/.bun/bin` in the PATH, the string interpolation is wrong. Use `{$home}` syntax, not `$home`.
 
 ### DeleteProjectJob
 

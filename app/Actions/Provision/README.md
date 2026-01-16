@@ -30,7 +30,7 @@ use App\Services\ProvisionLogger;
 
 $context = new ProvisionContext(
     slug: "my-project",
-    projectPath: "/home/launchpad/projects/my-project",
+    projectPath: "/home/orbit/projects/my-project",
 );
 
 $logger = new ProvisionLogger(slug: $context->slug);

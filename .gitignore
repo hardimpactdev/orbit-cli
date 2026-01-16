@@ -3,5 +3,6 @@
 /.vscode
 /.vagrant
 .phpunit.result.cache
-launchpad-cli/
+orbit-cli/
 .box_dump/
+/var/

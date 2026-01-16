@@ -633,10 +633,10 @@ Use the test script on the remote server:
 
 ```bash
 # Quick test with random project name
-ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh
+ssh orbit@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh
 
 # Custom project name
-ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh my-test-project
+ssh orbit@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh my-test-project
 ```
 
 See the full testing guide in the orbit-desktop repo: `.claude/skills/test-provision/SKILL.md`
@@ -693,7 +693,7 @@ tail -f ~/.config/orbit/web/storage/logs/laravel.log  # View logs
 
 ## PHP-FPM Permissions
 
-PHP-FPM runs as the `launchpad` user on the host, with direct access to all project files.
+PHP-FPM runs as the `orbit` user on the host, with direct access to all project files.
 
 ```bash
 # Verify PHP-FPM is running
