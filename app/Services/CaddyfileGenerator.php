@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Services\Platform\PlatformAdapter;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Process;
 
 class CaddyfileGenerator
 {
@@ -13,7 +13,8 @@ class CaddyfileGenerator
         protected ConfigManager $configManager,
         protected SiteScanner $siteScanner,
         protected ?PhpManager $phpManager = null,
-        protected ?WorktreeService $worktreeService = null
+        protected ?WorktreeService $worktreeService = null,
+        protected ?PlatformAdapter $platform = null
     ) {
         $this->caddyfilePath = $this->configManager->getConfigPath().'/caddy/Caddyfile';
     }
@@ -129,26 +130,22 @@ class CaddyfileGenerator
 
     public function reload(): bool
     {
-        // Reload host Caddy service
-        $result = Process::run('sudo systemctl reload caddy');
+        if ($this->platform === null) {
+            $this->platform = app(PlatformAdapter::class);
+        }
 
-        return $result->successful();
+        return $this->platform->reloadCaddy();
     }
 
     public function reloadPhp(): bool
     {
-        // Restart PHP-FPM pools
-        $versions = ['8.3', '8.4'];
-        $success = false;
-        foreach ($versions as $version) {
-            $normalized = str_replace('.', '', $version);
-            $result = Process::run("sudo systemctl restart php{$version}-fpm 2>/dev/null");
-            if ($result->successful()) {
-                $success = true;
-            }
+        if ($this->platform === null) {
+            $this->platform = app(PlatformAdapter::class);
         }
 
-        return $success;
+        $defaultVersion = $this->configManager->get('default_php_version', '8.4');
+
+        return $this->platform->restartPhpFpm($defaultVersion);
     }
 
     protected function getWorktreesForCaddy(): array
