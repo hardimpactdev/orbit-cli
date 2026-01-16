@@ -73,15 +73,19 @@ class CaddyfileGenerator
     root * {$root}
     encode gzip
 
-    # Vite dev server proxy
+    # Vite dev server proxy (header_up bypasses Vite allowedHosts bug)
     @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*
-    reverse_proxy @vite localhost:5173
+    reverse_proxy @vite localhost:5173 {
+        header_up Host localhost
+    }
 
     @ws {
         header Connection *Upgrade*
         header Upgrade websocket
     }
-    reverse_proxy @ws localhost:5173
+    reverse_proxy @ws localhost:5173 {
+        header_up Host localhost
+    }
 
     php_fastcgi unix/{$socket}
     file_server
