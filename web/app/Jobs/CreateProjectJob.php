@@ -33,6 +33,7 @@ class CreateProjectJob implements ShouldQueue
         public ?string $queueDriver = null,
         public ?string $path = null,
         public bool $minimal = false,
+        public ?string $organization = null,
     ) {}
 
     public function handle(): void
@@ -76,6 +77,9 @@ class CreateProjectJob implements ShouldQueue
             }
             if ($this->minimal) {
                 $command .= ' --minimal';
+            }
+            if ($this->organization) {
+                $command .= ' --organization='.escapeshellarg($this->organization);
             }
 
             Log::info('CreateProjectJob: Running', ['slug' => $this->slug, 'command' => $command]);

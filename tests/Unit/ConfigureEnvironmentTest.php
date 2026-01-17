@@ -3,6 +3,7 @@
 use App\Actions\Provision\ConfigureEnvironment;
 use App\Data\Provision\ProvisionContext;
 use App\Services\ProvisionLogger;
+use App\Services\ServiceManager;
 
 beforeEach(function () {
     $this->projectPath = createTestProject('test-env');
@@ -190,4 +191,46 @@ it('returns success when no .env file exists', function () {
     $result = $action->handle($context, $this->logger);
 
     expect($result->isSuccess())->toBeTrue();
+});
+
+it('uses PostgreSQL credentials from ServiceManager when provided', function () {
+    $context = new ProvisionContext(
+        slug: 'test-env',
+        projectPath: $this->projectPath,
+        dbDriver: 'pgsql',
+    );
+
+    // Mock ServiceManager with custom credentials
+    $serviceManager = Mockery::mock(ServiceManager::class);
+    $serviceManager->shouldReceive('getService')
+        ->with('postgres')
+        ->andReturn([
+            'POSTGRES_USER' => 'custom_user',
+            'POSTGRES_PASSWORD' => 'custom_pass',
+            'port' => 5433,
+        ]);
+
+    $action = new ConfigureEnvironment;
+    $result = $action->handle($context, $this->logger, $serviceManager);
+
+    $env = file_get_contents("{$this->projectPath}/.env");
+    expect($env)->toContain('DB_USERNAME=custom_user');
+    expect($env)->toContain('DB_PASSWORD=custom_pass');
+    expect($env)->toContain('DB_PORT=5433');
+});
+
+it('uses default PostgreSQL credentials when ServiceManager not provided', function () {
+    $context = new ProvisionContext(
+        slug: 'test-env',
+        projectPath: $this->projectPath,
+        dbDriver: 'pgsql',
+    );
+
+    $action = new ConfigureEnvironment;
+    $result = $action->handle($context, $this->logger);
+
+    $env = file_get_contents("{$this->projectPath}/.env");
+    expect($env)->toContain('DB_USERNAME=orbit');
+    expect($env)->toContain('DB_PASSWORD=secret');
+    expect($env)->toContain('DB_PORT=5432');
 });

@@ -25,6 +25,7 @@ use App\Services\ConfigManager;
 use App\Services\McpClient;
 use App\Services\ProvisionLogger;
 use App\Services\ReverbBroadcaster;
+use App\Services\ServiceManager;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
@@ -44,6 +45,7 @@ final class ProvisionCommand extends Command
         {--minimal : Only run composer install, skip npm/build/env/migrations}
         {--name= : Display name for APP_NAME (defaults to slug)}
         {--fork : Fork the repository instead of importing as new}
+        {--organization= : GitHub organization to create the repo under (overrides personal account)}
         {--json : Output as JSON (for programmatic use)}';
 
     protected $description = 'Provision a project (create repo, clone, setup, register with sequence)';
@@ -178,6 +180,7 @@ final class ProvisionCommand extends Command
             fork: (bool) $this->option('fork'),
             displayName: $this->option('name'),
             tld: $tld,
+            organization: $this->option('organization'),
         );
     }
 
@@ -201,9 +204,10 @@ final class ProvisionCommand extends Command
         if ($context->template) {
             // Determine target repo name
             if (! $githubRepo) {
-                $username = $this->getGitHubUsername($config);
-                if ($username) {
-                    $githubRepo = "{$username}/{$context->slug}";
+                // Use organization if specified, otherwise fall back to personal username
+                $owner = $context->getGitHubOwner($this->getGitHubUsername($config));
+                if ($owner) {
+                    $githubRepo = "{$owner}/{$context->slug}";
                 }
             }
 
@@ -235,6 +239,7 @@ final class ProvisionCommand extends Command
             fork: $context->fork,
             displayName: $context->displayName,
             tld: $context->tld,
+            organization: $context->organization,
         );
     }
 
@@ -245,8 +250,9 @@ final class ProvisionCommand extends Command
             return $context;
         }
 
-        $username = $this->getGitHubUsername($config);
-        if (! $username) {
+        // Use organization if specified, otherwise fall back to personal username
+        $owner = $context->getGitHubOwner($this->getGitHubUsername($config));
+        if (! $owner) {
             return $context;
         }
 
@@ -254,8 +260,8 @@ final class ProvisionCommand extends Command
         $sourceOwner = explode('/', $sourceRepo)[0];
 
         // If source repo owner is different, import as new repo
-        if (strtolower($sourceOwner) !== strtolower($username)) {
-            $targetRepo = "{$username}/{$context->slug}";
+        if (strtolower($sourceOwner) !== strtolower($owner)) {
+            $targetRepo = "{$owner}/{$context->slug}";
             $this->logger->broadcast('importing');
             $this->importAsNewRepo($targetRepo, $context->visibility);
 
@@ -275,6 +281,7 @@ final class ProvisionCommand extends Command
                 fork: $context->fork,
                 displayName: $context->displayName,
                 tld: $context->tld,
+                organization: $context->organization,
             );
         }
 
@@ -295,6 +302,7 @@ final class ProvisionCommand extends Command
             fork: $context->fork,
             displayName: $context->displayName,
             tld: $context->tld,
+            organization: $context->organization,
         );
     }
 
@@ -340,7 +348,7 @@ final class ProvisionCommand extends Command
         }
 
         // Step 4: Configure environment
-        $result = app(ConfigureEnvironment::class)->handle($context, $this->logger);
+        $result = app(ConfigureEnvironment::class)->handle($context, $this->logger, app(ServiceManager::class));
         if ($result->isFailed()) {
             throw new \RuntimeException($result->error);
         }

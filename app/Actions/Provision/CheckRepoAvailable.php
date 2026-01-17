@@ -55,23 +55,17 @@ final class CheckRepoAvailable
             return $context->githubRepo;
         }
 
-        // Get the GitHub username
-        $username = $config->get('github_username');
-        if (! $username) {
-            $whoami = shell_exec('gh api user --jq .login 2>/dev/null');
-            if ($whoami) {
-                $username = trim($whoami);
-            }
-        }
+        // Get the GitHub owner (organization takes precedence over personal username)
+        $owner = $this->getGitHubOwner($context, $config);
 
-        if (! $username) {
-            // Cannot determine target repo without username
+        if (! $owner) {
+            // Cannot determine target repo without owner
             return null;
         }
 
-        // For templates: will create {username}/{slug}
+        // For templates: will create {owner}/{slug}
         if ($context->template) {
-            return "{$username}/{$context->slug}";
+            return "{$owner}/{$context->slug}";
         }
 
         // For clone-url: check if we need to import as new repo
@@ -80,20 +74,42 @@ final class CheckRepoAvailable
             $sourceOwner = explode('/', $sourceRepo)[0] ?? '';
 
             // If cloning from different owner, will create new repo
-            if (strtolower($sourceOwner) !== strtolower((string) $username)) {
-                return "{$username}/{$context->slug}";
+            if (strtolower($sourceOwner) !== strtolower((string) $owner)) {
+                return "{$owner}/{$context->slug}";
             }
         }
 
-        // For fork: will create {username}/{original-name}
+        // For fork: will create {owner}/{original-name}
         if ($context->fork && $context->cloneUrl) {
             $sourceRepo = $this->extractRepoFromUrl($context->cloneUrl);
             $originalName = explode('/', $sourceRepo)[1] ?? $context->slug;
 
-            return "{$username}/{$originalName}";
+            return "{$owner}/{$originalName}";
         }
 
         return null;
+    }
+
+    /**
+     * Get the GitHub owner - organization if set, otherwise personal username.
+     */
+    private function getGitHubOwner(ProvisionContext $context, ConfigManager $config): ?string
+    {
+        // Organization takes precedence
+        if ($context->organization) {
+            return $context->organization;
+        }
+
+        // Fall back to personal username
+        $username = $config->get('github_username');
+        if (! $username) {
+            $whoami = shell_exec('gh api user --jq .login 2>/dev/null');
+            if ($whoami) {
+                $username = trim($whoami);
+            }
+        }
+
+        return $username;
     }
 
     private function extractRepoFromUrl(?string $url): string

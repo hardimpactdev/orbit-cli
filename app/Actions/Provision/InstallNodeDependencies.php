@@ -74,26 +74,25 @@ final readonly class InstallNodeDependencies
         $home = $context->getHomeDir();
         $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
 
-        // Remove lock files to allow fresh install
-        @unlink("{$projectPath}/bunfig.toml");
-        @unlink("{$projectPath}/bun.lock");
-        @unlink("{$projectPath}/bun.lockb");
-
         $logger->info('Installing dependencies with Bun...');
+
+        // Check if lock file exists for bun ci, otherwise use bun install
+        $hasLockFile = file_exists("{$projectPath}/bun.lock") || file_exists("{$projectPath}/bun.lockb");
+        $bunCommand = $hasLockFile ? 'ci' : 'install';
 
         try {
             // Use env -i to clear inherited environment (prevents APP_KEY pollution from Horizon)
-            // Use 'bun ci' for CI/background environments - handles non-TTY properly
-            $command = $context->wrapWithCleanEnv("{$bunPath} ci");
+            // Use 'bun ci' for CI/background environments when lock file exists
+            $command = $context->wrapWithCleanEnv("{$bunPath} {$bunCommand}");
             $result = Process::path($projectPath)
                 ->timeout(120)
                 ->run("{$command} 2>&1");
 
             if (! $result->successful()) {
-                return StepResult::failed('Bun install failed: '.substr($result->output(), 0, 500));
+                return StepResult::failed("Bun {$bunCommand} failed: ".substr($result->output(), 0, 500));
             }
 
-            $logger->info('Bun install completed');
+            $logger->info("Bun {$bunCommand} completed");
 
             return StepResult::success();
         } catch (ProcessTimedOutException) {

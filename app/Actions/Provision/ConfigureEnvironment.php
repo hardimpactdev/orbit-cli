@@ -7,10 +7,11 @@ namespace App\Actions\Provision;
 use App\Data\Provision\ProvisionContext;
 use App\Data\Provision\StepResult;
 use App\Services\ProvisionLogger;
+use App\Services\ServiceManager;
 
 final readonly class ConfigureEnvironment
 {
-    public function handle(ProvisionContext $context, ProvisionLogger $logger): StepResult
+    public function handle(ProvisionContext $context, ProvisionLogger $logger, ?ServiceManager $serviceManager = null): StepResult
     {
         $envExamplePath = "{$context->projectPath}/.env.example";
         $envPath = "{$context->projectPath}/.env";
@@ -45,12 +46,18 @@ final readonly class ConfigureEnvironment
 
         // Database configuration
         if ($context->dbDriver === 'pgsql') {
+            // Get PostgreSQL credentials from services config
+            $pgConfig = $serviceManager?->getService('postgres') ?? [];
+            $pgUser = $pgConfig['POSTGRES_USER'] ?? 'orbit';
+            $pgPassword = $pgConfig['POSTGRES_PASSWORD'] ?? 'secret';
+            $pgPort = $pgConfig['port'] ?? 5432;
+
             $env = $this->setEnvValue($env, 'DB_CONNECTION', 'pgsql');
             $env = $this->setEnvValue($env, 'DB_HOST', 'orbit-postgres');
-            $env = $this->setEnvValue($env, 'DB_PORT', '5432');
+            $env = $this->setEnvValue($env, 'DB_PORT', (string) $pgPort);
             $env = $this->setEnvValue($env, 'DB_DATABASE', $context->slug);
-            $env = $this->setEnvValue($env, 'DB_USERNAME', 'orbit');
-            $env = $this->setEnvValue($env, 'DB_PASSWORD', 'orbit');
+            $env = $this->setEnvValue($env, 'DB_USERNAME', $pgUser);
+            $env = $this->setEnvValue($env, 'DB_PASSWORD', $pgPassword);
             $logger->log("Configured PostgreSQL database: {$context->slug}");
         } elseif ($context->dbDriver === 'sqlite') {
             $env = $this->setEnvValue($env, 'DB_CONNECTION', 'sqlite');

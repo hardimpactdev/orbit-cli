@@ -27,6 +27,7 @@ it('has default values for optional fields', function () {
     expect($context->template)->toBeNull();
     expect($context->phpVersion)->toBeNull();
     expect($context->dbDriver)->toBeNull();
+    expect($context->organization)->toBeNull();
 });
 
 it('returns correct PHP environment', function () {
@@ -71,6 +72,7 @@ it('accepts all optional fields', function () {
         fork: true,
         displayName: 'My Project',
         tld: 'test',
+        organization: 'my-org',
     );
 
     expect($context->githubRepo)->toBe('user/my-project');
@@ -86,4 +88,33 @@ it('accepts all optional fields', function () {
     expect($context->fork)->toBeTrue();
     expect($context->displayName)->toBe('My Project');
     expect($context->tld)->toBe('test');
+    expect($context->organization)->toBe('my-org');
+});
+
+it('returns organization as owner when set', function () {
+    $context = new ProvisionContext(
+        slug: 'my-project',
+        projectPath: '/tmp/my-project',
+        organization: 'my-org',
+    );
+
+    expect($context->getGitHubOwner('fallback-user'))->toBe('my-org');
+});
+
+it('returns fallback username when organization is not set', function () {
+    $context = new ProvisionContext(
+        slug: 'my-project',
+        projectPath: '/tmp/my-project',
+    );
+
+    expect($context->getGitHubOwner('fallback-user'))->toBe('fallback-user');
+});
+
+it('returns null when no organization and no fallback', function () {
+    $context = new ProvisionContext(
+        slug: 'my-project',
+        projectPath: '/tmp/my-project',
+    );
+
+    expect($context->getGitHubOwner(null))->toBeNull();
 });

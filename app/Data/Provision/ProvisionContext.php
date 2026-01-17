@@ -22,7 +22,17 @@ final class ProvisionContext
         public bool $fork = false,
         public ?string $displayName = null,
         public ?string $tld = 'ccc',
+        public ?string $organization = null,
     ) {}
+
+    /**
+     * Get the GitHub owner (organization or personal username).
+     * Organization takes precedence if set.
+     */
+    public function getGitHubOwner(?string $fallbackUsername = null): ?string
+    {
+        return $this->organization ?? $fallbackUsername;
+    }
 
     public function getHomeDir(): string
     {

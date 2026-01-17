@@ -28,6 +28,7 @@ class ProjectController extends Controller
             'queue_driver' => 'nullable|string|in:sync,database,redis',
             'path' => 'nullable|string',
             'minimal' => 'boolean',
+            'organization' => 'nullable|string|max:255',
         ]);
 
         $slug = Str::slug($validated['name']);
@@ -55,6 +56,7 @@ class ProjectController extends Controller
             queueDriver: $validated['queue_driver'] ?? null,
             path: $validated['path'] ?? null,
             minimal: $validated['minimal'] ?? false,
+            organization: $validated['organization'] ?? null,
         );
 
         return response()->json([
