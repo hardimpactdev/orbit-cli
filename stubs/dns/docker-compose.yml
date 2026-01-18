@@ -2,10 +2,8 @@ services:
   dns:
     build:
       context: .
-      args:
-        HOST_IP: ${HOST_IP:-127.0.0.1}
-        TLD: ${TLD:-test}
     container_name: orbit-dns
     network_mode: host
     restart: unless-stopped
-    # Note: healthcheck is defined in Dockerfile due to network_mode: host
+    volumes:
+      - ${CONFIG_PATH}/dnsmasq.conf:/etc/dnsmasq.conf:ro

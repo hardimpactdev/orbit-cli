@@ -292,8 +292,7 @@ class DockerManager
     {
         if ($service === 'dns') {
             return [
-                'HOST_IP' => $this->configManager->getHostIp(),
-                'TLD' => $this->configManager->getTld(),
+                'CONFIG_PATH' => $this->configManager->getConfigPath(),
             ];
         }
 
