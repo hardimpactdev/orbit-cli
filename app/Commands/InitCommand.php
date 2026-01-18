@@ -122,6 +122,13 @@ class InitCommand extends Command
             return true;
         });
 
+        // 4.3. Generate dnsmasq.conf from DNS mappings
+        $this->task('Generating dnsmasq configuration', function () use ($configManager) {
+            $configManager->writeDnsmasqConf();
+
+            return true;
+        });
+
         // 4.5. Initialize services.yaml and generate docker-compose.yaml
         $this->task('Initializing service configuration', function () use ($serviceManager) {
             // ServiceManager will auto-create services.yaml from stub if missing

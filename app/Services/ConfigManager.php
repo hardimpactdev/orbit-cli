@@ -138,4 +138,78 @@ class ConfigManager
     {
         $this->set("services.{$service}.enabled", false);
     }
+
+    // DNS Mappings Management
+
+    public function getDnsMappings(): array
+    {
+        return $this->get('dns_mappings', [
+            ['type' => 'address', 'tld' => 'test', 'value' => '127.0.0.1'],
+            ['type' => 'server', 'value' => '8.8.8.8'],
+            ['type' => 'server', 'value' => '8.8.4.4'],
+        ]);
+    }
+
+    public function setDnsMappings(array $mappings): void
+    {
+        $this->set('dns_mappings', $mappings);
+    }
+
+    public function addDnsMapping(string $type, string $value, ?string $tld = null): void
+    {
+        $mappings = $this->getDnsMappings();
+
+        $mapping = ['type' => $type, 'value' => $value];
+        if ($tld !== null) {
+            $mapping['tld'] = $tld;
+        }
+
+        $mappings[] = $mapping;
+        $this->setDnsMappings($mappings);
+    }
+
+    public function removeDnsMapping(int $index): void
+    {
+        $mappings = $this->getDnsMappings();
+        if (isset($mappings[$index])) {
+            array_splice($mappings, $index, 1);
+            $this->setDnsMappings($mappings);
+        }
+    }
+
+    public function generateDnsmasqConf(): string
+    {
+        $content = "# Orbit DNS configuration\n";
+        $content .= "# This file is auto-generated from config.json\n";
+        $content .= "# Do not edit manually - use the Orbit UI or CLI to manage DNS mappings\n\n";
+
+        $mappings = $this->getDnsMappings();
+
+        foreach ($mappings as $mapping) {
+            if ($mapping['type'] === 'address') {
+                $tld = $mapping['tld'] ?? 'test';
+                $value = $mapping['value'];
+                $content .= "address=/{$tld}/{$value}\n";
+            } elseif ($mapping['type'] === 'server') {
+                $tld = $mapping['tld'] ?? null;
+                $value = $mapping['value'];
+                if ($tld) {
+                    $content .= "server=/{$tld}/{$value}\n";
+                } else {
+                    $content .= "server={$value}\n";
+                }
+            }
+        }
+
+        $content .= "\nlog-queries\n";
+        $content .= "log-facility=-\n";
+
+        return $content;
+    }
+
+    public function writeDnsmasqConf(): void
+    {
+        $path = $this->getConfigPath().'/dnsmasq.conf';
+        File::put($path, $this->generateDnsmasqConf());
+    }
 }

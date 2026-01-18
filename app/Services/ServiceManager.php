@@ -341,6 +341,11 @@ class ServiceManager
             throw new RuntimeException("Service not enabled: {$name}");
         }
 
+        // Regenerate dnsmasq.conf if starting DNS service
+        if ($name === 'dns') {
+            $this->configManager->writeDnsmasqConf();
+        }
+
         // Regenerate compose to ensure it's up to date
         $this->regenerateCompose();
 
@@ -367,6 +372,11 @@ class ServiceManager
      */
     public function startAll(): bool
     {
+        // Regenerate dnsmasq.conf if DNS service is enabled
+        if ($this->isEnabled('dns')) {
+            $this->configManager->writeDnsmasqConf();
+        }
+
         // Regenerate compose to ensure it's up to date
         $this->regenerateCompose();
 
