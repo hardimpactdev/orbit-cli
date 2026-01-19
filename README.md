@@ -121,7 +121,7 @@ Orbit provides a declarative service management system. Services are defined as 
 | redis | cache | 6379 | Redis cache/session store |
 | mailpit | mail | 1025/8025 | Email testing (SMTP/Web UI) |
 | meilisearch | search | 7700 | Full-text search engine |
-| reverb | websocket | 6001 | Laravel Reverb WebSocket |
+| reverb | websocket | 8080 | Laravel Reverb WebSocket |
 | dns | core | 53 | Local DNS resolver |
 
 ### Examples

@@ -565,7 +565,7 @@ $broadcaster->broadcast('provisioning', 'project.provision.status', [
         "app_secret": "orbit-secret",
         "host": "reverb.ccc",
         "port": 443,
-        "internal_port": 6001
+        "internal_port": 8080
     },
     "services": {
         "reverb": { "enabled": true }
@@ -573,7 +573,7 @@ $broadcaster->broadcast('provisioning', 'project.provision.status', [
 }
 ```
 
-The broadcaster connects to internal port 6001 (HTTP) to avoid TLS certificate issues when broadcasting from the same server.
+The broadcaster connects to internal port 8080 (HTTP) to avoid TLS certificate issues when broadcasting from the same server.
 
 ## Provisioning Optimizations
 
