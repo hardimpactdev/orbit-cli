@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eda740869c4e6526ce2bd60628e5192a",
+    "content-hash": "dc01b131ca4433bdacea6c9261b0d359",
     "packages": [
         {
             "name": "brick/math",
@@ -1125,11 +1125,17 @@
         },
         {
             "name": "hardimpactdev/orbit-core",
-            "version": "dev-main",
+            "version": "0.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/hardimpactdev/orbit-core.git",
+                "reference": "6a849122c4ff4ff71684fb01cabdafbff7e0708a"
+            },
             "dist": {
-                "type": "path",
-                "url": "../orbit-core",
-                "reference": "a120486dc2f0d43786eb2f5c5f8da2e1b4bbbd77"
+                "type": "zip",
+                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/6a849122c4ff4ff71684fb01cabdafbff7e0708a",
+                "reference": "6a849122c4ff4ff71684fb01cabdafbff7e0708a",
+                "shasum": ""
             },
             "require": {
                 "illuminate/contracts": "^11.0||^12.0",
@@ -1159,22 +1165,7 @@
                     "HardImpact\\Orbit\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "HardImpact\\Orbit\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "analyse": [
-                    "vendor/bin/phpstan analyse"
-                ],
-                "test": [
-                    "vendor/bin/pest"
-                ],
-                "format": [
-                    "vendor/bin/pint"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1192,10 +1183,17 @@
                 "laravel",
                 "orbit"
             ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/hardimpactdev/orbit-core/issues",
+                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.4"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Hard Impact",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-01-19T10:35:38+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
@@ -8346,11 +8344,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.1.33",
+            "version": "2.1.34",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/9e800e6bee7d5bd02784d4c6069b48032d16224f",
-                "reference": "9e800e6bee7d5bd02784d4c6069b48032d16224f",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/070ba754a949fcade788e16e8dc5a5935b7cf2ee",
+                "reference": "070ba754a949fcade788e16e8dc5a5935b7cf2ee",
                 "shasum": ""
             },
             "require": {
@@ -8395,7 +8393,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-12-05T10:24:31+00:00"
+            "time": "2026-01-19T19:52:16+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

@@ -45,7 +45,7 @@ Run before every commit/release:
 Dev machine uses symlink (not downloaded PHAR):
 
 ```bash
-ln -s /home/nckrtl/projects/orbit-cli/orbit ~/.local/bin/orbit
+ln -s /home/nckrtl/workspaces/orbit/orbit-cli/orbit ~/.local/bin/orbit
 ```
 
 Ensure `~/.local/bin` is in PATH (already configured in .bashrc).
@@ -72,10 +72,44 @@ After fixes verified (all tests pass):
 ## Platform Support
 
 Code must work on both Linux and macOS. Use `PlatformService` for OS detection:
-- `$platform->isMac()` / `$platform->isLinux()`
+- `$platform->isMacOS()` / `$platform->isLinux()`
 - Platform-specific adapters in `app/Services/Platform/`
 
 ## Known Gotchas
+
+### NEVER Use Path Repositories for orbit-core
+
+**Problem:** Using a local path repository in `composer.json` for `orbit-core` (or any package) breaks CI/CD pipelines.
+
+```json
+// NEVER DO THIS - breaks GitHub Actions
+"repositories": [
+    {
+        "type": "path",
+        "url": "../orbit-core"
+    }
+]
+```
+
+**Why it fails:**
+1. The path `../orbit-core` doesn't exist in GitHub Actions runners
+2. The `composer.lock` caches the path-based install location
+3. Even after removing the repository config, the lock file still references the path
+4. CI fails with "Source path '../orbit-core' is not found"
+
+**Solution:** Always use Packagist for orbit-core:
+- Use `"hardimpactdev/orbit-core": "@dev"` or a specific version
+- Never add path repositories to composer.json
+- If you need to test local changes to orbit-core:
+  1. Push orbit-core changes to GitHub first
+  2. Run `composer update hardimpactdev/orbit-core` to pull from Packagist
+  3. Or use `composer config repositories.local path ../orbit-core` temporarily (but NEVER commit this)
+
+**If CI is broken due to path repository:**
+1. Remove the repositories section from composer.json
+2. Delete composer.lock
+3. Run `composer install` to regenerate lock from Packagist
+4. Commit both files
 
 ### Bun/Node Package Managers in Background Processes
 
@@ -140,12 +174,12 @@ $this->phpManager->getAdapter()->reloadCaddy();
 **Root Cause:** The web app calls CLI commands synchronously. If the CLI triggers `systemctl restart php-fpm` or even `systemctl reload php-fpm`, it disrupts the PHP-FPM worker handling the original request.
 
 **Solution:** Avoid PHP-FPM restarts/reloads during operations that are called from web contexts:
-- In `ProvisionCommand`, the early Caddy reload step should NOT include `reloadPhp()` 
+- In `SiteCreateCommand`, the early Caddy reload step should NOT include `reloadPhp()` 
 - Only reload Caddy (which is safe) - PHP-FPM reload is not needed for new sites to be accessible
 - Use `reloadPhpFpm()` (graceful reload) instead of `restartPhpFpm()` when reload is absolutely necessary
 
 ```php
-// In ProvisionCommand - early Caddy reload
+// In SiteCreateCommand - early Caddy reload
 $caddyfileGenerator->generate();
 $caddyfileGenerator->reload();  // Safe
 // $caddyfileGenerator->reloadPhp();  // REMOVED - causes 502 when called from web
