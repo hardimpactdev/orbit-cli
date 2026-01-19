@@ -80,3 +80,36 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release has PHAR download URL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Waiting for release assets to be available..."
+          sleep 5
+          
+          echo "Fetching release info for ${{ steps.version.outputs.version }}..."
+          RELEASE_JSON=$(gh api repos/${{ github.repository }}/releases/tags/${{ steps.version.outputs.version }})
+          
+          echo "Checking for orbit.phar asset..."
+          PHAR_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name=="orbit.phar") | .browser_download_url')
+          
+          if [ -z "$PHAR_URL" ] || [ "$PHAR_URL" = "null" ]; then
+            echo "::error::Could not find PHAR download URL in the release!"
+            echo "This would cause 'orbit upgrade' to fail for users."
+            echo ""
+            echo "Release assets:"
+            echo "$RELEASE_JSON" | jq '.assets[].name'
+            exit 1
+          fi
+          
+          echo "PHAR download URL found: $PHAR_URL"
+          
+          echo "Verifying PHAR is downloadable..."
+          HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$PHAR_URL")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::PHAR download failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          
+          echo "Release verification passed! orbit upgrade will work."
