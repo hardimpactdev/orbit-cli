@@ -55,7 +55,7 @@ final class OrbitServer extends Server
           - All outgoing emails are captured locally
 
         ### WebSocket
-        - **Reverb**: `orbit-reverb:6001`
+        - **Reverb**: `orbit-reverb:8080`
           - Laravel WebSocket server
           - Used for real-time broadcasting
 

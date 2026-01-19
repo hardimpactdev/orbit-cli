@@ -175,7 +175,7 @@ class InfrastructureResource extends Resource
             'orbit-postgres' => ['5432/tcp'],
             'orbit-redis' => ['6379/tcp'],
             'orbit-mailpit' => ['1025/tcp', '8025/tcp'],
-            'orbit-reverb' => ['6001/tcp', '6002/tcp'],
+            'orbit-reverb' => ['8080/tcp'],
             'orbit-horizon' => [],
         ];
 

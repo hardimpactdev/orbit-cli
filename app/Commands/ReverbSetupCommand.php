@@ -65,7 +65,7 @@ REVERB_APP_ID={$appId}
 REVERB_APP_KEY={$appKey}
 REVERB_APP_SECRET={$appSecret}
 REVERB_HOST=0.0.0.0
-REVERB_PORT=6001
+REVERB_PORT=8080
 ENV;
 
         File::put($reverbConfigPath.'/.env', $envContent);
