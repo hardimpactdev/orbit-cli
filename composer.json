@@ -21,7 +21,7 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "guzzlehttp/guzzle": "^7.10",
         "illuminate/http": "^12.45",
         "hardimpactdev/orbit-core": "@dev",
