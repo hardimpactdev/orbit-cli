@@ -91,10 +91,28 @@ class WebInstallCommand extends Command
 
         File::ensureDirectoryExists($destination);
 
-        // Using tar command for better reliability and performance
-        $result = Process::run("tar -xzf {$bundlePath} -C {$destination}");
+        // When running from a PHAR, tar can't read phar:// paths directly.
+        // We need to copy the bundle to a temp file first.
+        $tempBundle = null;
+        if (str_starts_with($bundlePath, 'phar://')) {
+            $tempBundle = tempnam(sys_get_temp_dir(), 'orbit-web-bundle-');
+            if (! copy($bundlePath, $tempBundle)) {
+                return false;
+            }
+            $bundlePath = $tempBundle;
+        }
 
-        return $result->successful();
+        try {
+            // Using tar command for better reliability and performance
+            $result = Process::run("tar -xzf {$bundlePath} -C {$destination}");
+
+            return $result->successful();
+        } finally {
+            // Clean up temp file
+            if ($tempBundle && file_exists($tempBundle)) {
+                @unlink($tempBundle);
+            }
+        }
     }
 
     protected function setPermissions(string $path): void
