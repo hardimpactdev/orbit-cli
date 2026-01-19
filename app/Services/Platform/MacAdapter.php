@@ -86,6 +86,26 @@ class MacAdapter implements PlatformAdapter
     }
 
     /**
+     * Gracefully reload PHP-FPM service for a version.
+     * Sends SIGUSR2 to master process for graceful reload.
+     */
+    public function reloadPhpFpm(string $version): bool
+    {
+        $normalizedVersion = $this->normalizePhpVersion($version);
+        $normalized = str_replace('.', '', $normalizedVersion);
+
+        // Find PHP-FPM master process and send SIGUSR2 for graceful reload
+        $result = Process::run("pkill -USR2 -f 'php-fpm.*{$normalized}.*master'");
+
+        // If no master process found, try a regular restart
+        if (! $result->successful()) {
+            return $this->restartPhpFpm($version);
+        }
+
+        return true;
+    }
+
+    /**
      * Check if PHP-FPM service is running for a version.
      */
     public function isPhpFpmRunning(string $version): bool

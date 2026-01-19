@@ -120,7 +120,11 @@ final class SiteCreateCommand extends Command
         }
 
         // Run provision command synchronously
-        $exitCode = Artisan::call('provision', $provisionArgs, $this->output);
+        // When outputting JSON, use NullOutput to suppress all console output
+        $output = $this->wantsJson()
+            ? new \Symfony\Component\Console\Output\NullOutput
+            : $this->output;
+        $exitCode = Artisan::call('provision', $provisionArgs, $output);
 
         if ($exitCode !== 0) {
             // Cleanup the directory we created

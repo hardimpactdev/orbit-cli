@@ -74,9 +74,10 @@ final class ProvisionCommand extends Command
         $context = $this->createContext($slug, $config);
 
         // Initialize logger
+        // When --json is passed, don't pass command to suppress console output
         $this->logger = new ProvisionLogger(
             broadcaster: $broadcaster,
-            command: $this,
+            command: $this->option('json') ? null : $this,
             slug: $slug,
         );
 
@@ -113,10 +114,11 @@ final class ProvisionCommand extends Command
             }
 
             // Early Caddy reload for accessibility
+            // Note: We only reload Caddy here, not PHP-FPM, to avoid disrupting
+            // the web request that triggered this provisioning
             $this->logger->info("Early Caddy reload (making {$slug}.{$context->tld} accessible)...");
             $caddyfileGenerator->generate();
             $caddyfileGenerator->reload();
-            $caddyfileGenerator->reloadPhp();
 
             // Phase 3: Project Setup
             $this->logger->broadcast('setting_up');
@@ -263,7 +265,7 @@ final class ProvisionCommand extends Command
         if (strtolower($sourceOwner) !== strtolower($owner)) {
             $targetRepo = "{$owner}/{$context->slug}";
             $this->logger->broadcast('importing');
-            $this->importAsNewRepo($targetRepo, $context->visibility);
+            $this->importAsNewRepo($targetRepo, $context->visibility, $context->projectPath);
 
             return new ProvisionContext(
                 slug: $context->slug,
@@ -443,14 +445,18 @@ final class ProvisionCommand extends Command
         $this->logger?->broadcast('failed', $reason);
     }
 
-    private function importAsNewRepo(string $newRepo, string $visibility): void
+    private function importAsNewRepo(string $newRepo, string $visibility, string $projectPath): void
     {
         $this->logger->info("Importing as new repository: {$newRepo}");
 
-        // Create new empty repository
-        $createResult = Process::timeout(60)->run(
-            "gh repo create {$newRepo} --{$visibility} --source=. --push"
-        );
+        // Remove existing origin (from clone) before creating new repo
+        Process::path($projectPath)->run('git remote remove origin');
+
+        // Create new repository from the cloned source
+        // Must run in the project directory for --source=. to work
+        $createResult = Process::timeout(60)
+            ->path($projectPath)
+            ->run("gh repo create {$newRepo} --{$visibility} --source=. --push");
 
         if (! $createResult->successful()) {
             throw new \RuntimeException('Failed to import as new repository: '.$createResult->errorOutput());

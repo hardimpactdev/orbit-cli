@@ -147,7 +147,8 @@ class CaddyfileGenerator
 
         $defaultVersion = $this->configManager->get('default_php_version', '8.4');
 
-        return $this->phpManager->getAdapter()->restartPhpFpm($defaultVersion);
+        // Use graceful reload to avoid killing active connections
+        return $this->phpManager->getAdapter()->reloadPhpFpm($defaultVersion);
     }
 
     protected function getWorktreesForCaddy(): array

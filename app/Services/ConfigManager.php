@@ -111,6 +111,9 @@ class ConfigManager
 
     public function getReverbConfig(): array
     {
+        // Internal port comes from services.yaml - this is the actual port Reverb listens on
+        $internalPort = $this->get('services.reverb.port', 8080);
+
         return [
             'enabled' => $this->isServiceEnabled('reverb'),
             'app_id' => $this->get('reverb.app_id', 'orbit'),
@@ -119,6 +122,7 @@ class ConfigManager
             'host' => $this->get('reverb.host', 'reverb.'.$this->get('tld', 'test')),
             'port' => $this->get('reverb.port', 443),
             'scheme' => 'https',
+            'internal_port' => $internalPort,
         ];
     }
 

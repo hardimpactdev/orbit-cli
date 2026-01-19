@@ -37,6 +37,11 @@ interface PlatformAdapter
     public function restartPhpFpm(string $version): bool;
 
     /**
+     * Gracefully reload PHP-FPM service for a version.
+     */
+    public function reloadPhpFpm(string $version): bool;
+
+    /**
      * Check if PHP-FPM service is running for a version.
      */
     public function isPhpFpmRunning(string $version): bool;

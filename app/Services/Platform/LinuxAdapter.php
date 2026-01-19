@@ -99,6 +99,18 @@ class LinuxAdapter implements PlatformAdapter
     }
 
     /**
+     * Gracefully reload PHP-FPM service for a version.
+     * Uses SIGUSR2 to reload workers without killing active connections.
+     */
+    public function reloadPhpFpm(string $version): bool
+    {
+        $normalizedVersion = $this->normalizePhpVersion($version);
+        $result = Process::run("sudo systemctl reload php{$normalizedVersion}-fpm");
+
+        return $result->successful();
+    }
+
+    /**
      * Check if PHP-FPM service is running for a version.
      */
     public function isPhpFpmRunning(string $version): bool

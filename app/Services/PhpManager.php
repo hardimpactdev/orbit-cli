@@ -66,6 +66,14 @@ class PhpManager
     }
 
     /**
+     * Gracefully reload PHP-FPM service for a version.
+     */
+    public function reload(string $version): bool
+    {
+        return $this->adapter->reloadPhpFpm($version);
+    }
+
+    /**
      * Check if PHP-FPM service is running for a version.
      */
     public function isRunning(string $version): bool

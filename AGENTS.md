@@ -133,6 +133,69 @@ $this->phpManager->getAdapter()->reloadCaddy();
 - `sudo systemctl reload caddy`
 - `sudo systemctl restart php8.4-fpm`
 
+### PHP-FPM Restart Kills Web Requests
+
+**Problem:** When the CLI is called from the orbit-web dashboard (via PHP-FPM), restarting or reloading PHP-FPM during command execution kills the requesting web process, causing a 502 Bad Gateway.
+
+**Root Cause:** The web app calls CLI commands synchronously. If the CLI triggers `systemctl restart php-fpm` or even `systemctl reload php-fpm`, it disrupts the PHP-FPM worker handling the original request.
+
+**Solution:** Avoid PHP-FPM restarts/reloads during operations that are called from web contexts:
+- In `ProvisionCommand`, the early Caddy reload step should NOT include `reloadPhp()` 
+- Only reload Caddy (which is safe) - PHP-FPM reload is not needed for new sites to be accessible
+- Use `reloadPhpFpm()` (graceful reload) instead of `restartPhpFpm()` when reload is absolutely necessary
+
+```php
+// In ProvisionCommand - early Caddy reload
+$caddyfileGenerator->generate();
+$caddyfileGenerator->reload();  // Safe
+// $caddyfileGenerator->reloadPhp();  // REMOVED - causes 502 when called from web
+```
+
+### JSON Output Must Be Clean
+
+**Problem:** When `--json` flag is used, the web app parses stdout as JSON. Any non-JSON output (console messages, warnings, info lines) corrupts the JSON and causes "Failed to parse JSON: Syntax error" errors.
+
+**Solution:** When `--json` is passed:
+1. Pass `null` instead of `$this` command to `ProvisionLogger` to suppress console output
+2. Use `NullOutput` for nested `Artisan::call()` invocations
+3. All warnings should go to stderr (via `error_log()`), not stdout
+
+```php
+// In ProvisionCommand
+$this->logger = new ProvisionLogger(
+    broadcaster: $broadcaster,
+    command: $this->option('json') ? null : $this,  // null suppresses output
+    slug: $slug,
+);
+
+// In SiteCreateCommand
+$output = $this->wantsJson() 
+    ? new \Symfony\Component\Console\Output\NullOutput() 
+    : $this->output;
+$exitCode = Artisan::call('provision', $provisionArgs, $output);
+```
+
+### Import Flow for Foreign Repos
+
+**Problem:** When cloning a repo from a different owner (e.g., `hardimpactdev/template` for user `nckrtl`), the import-as-new-repo flow must:
+1. Run in the cloned project directory (not current working directory)
+2. Remove existing origin before creating new repo
+
+**Solution:** 
+
+```php
+private function importAsNewRepo(string $newRepo, string $visibility, string $projectPath): void
+{
+    // Remove existing origin from clone
+    Process::path($projectPath)->run('git remote remove origin');
+
+    // Create new repo from source - MUST use ->path() to run in project directory
+    $createResult = Process::timeout(60)
+        ->path($projectPath)  // Critical!
+        ->run("gh repo create {$newRepo} --{$visibility} --source=. --push");
+}
+```
+
 ### PHP-FPM Pool Configuration
 
 PHP-FPM pool configs are stored in different locations per OS:

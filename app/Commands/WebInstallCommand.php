@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Services\ConfigManager;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
@@ -38,6 +39,7 @@ class WebInstallCommand extends Command
             $this->info('[DRY RUN] Would extract bundle to: '.$destPath);
             $this->info('[DRY RUN] Would set permissions: chmod 755 for directories and 644 for files');
             $this->info('[DRY RUN] Would generate environment file');
+            $this->info('[DRY RUN] Would run database migrations');
             $this->info('[DRY RUN] Would update Caddy configuration');
 
             return self::SUCCESS;
@@ -59,6 +61,9 @@ class WebInstallCommand extends Command
 
             return true;
         });
+
+        // Run database migrations (using orbit-cli's migrations, shared database)
+        $this->task('Running database migrations', fn () => Artisan::call('db:migrate') === 0);
 
         // Regenerate Caddyfile
         $this->task('Updating Caddy configuration', function () {

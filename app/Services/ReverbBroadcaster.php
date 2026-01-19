@@ -28,11 +28,11 @@ final class ReverbBroadcaster
             if ($isDocker) {
                 // Inside Docker: connect to Reverb container via Docker network
                 $this->host = getenv('REVERB_HOST') ?: 'orbit-reverb';
-                $this->port = (int) (getenv('REVERB_PORT') ?: 6001);
+                $this->port = (int) (getenv('REVERB_PORT') ?: 8080);
             } else {
-                // On host: connect to Reverb internal port (6001)
+                // On host: connect to Reverb internal port (8080 is Laravel Reverb's default)
                 $this->host = '127.0.0.1';
-                $this->port = $reverbConfig['internal_port'] ?? 6001;
+                $this->port = $reverbConfig['internal_port'] ?? 8080;
             }
 
             $this->pusher = new Pusher(
