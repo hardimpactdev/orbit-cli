@@ -60,6 +60,7 @@ jobs:
       - name: Install orbit-cli dependencies
         run: |
           cd orbit-cli
+          composer config --unset repositories.0
           composer install --no-dev --optimize-autoloader --prefer-dist
 
       - name: Download Box

@@ -33,6 +33,11 @@ jobs:
       - name: Set version in config
         run: sed -i "s/@version@/${{ steps.version.outputs.version }}/g" config/app.php
 
+      - name: Remove local path repository for CI
+        run: |
+          # Remove local path repository that only exists in dev environment
+          composer config --unset repositories.0
+          
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader --prefer-dist
 
