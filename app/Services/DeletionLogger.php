@@ -84,17 +84,17 @@ final class DeletionLogger
             $data['error'] = $error;
         }
 
-        // Broadcast to project-specific channel
+        // Broadcast to site-specific channel
         $this->broadcaster->broadcast(
-            "project.{$this->slug}",
-            'project.deletion.status',
+            "site.{$this->slug}",
+            'site.deletion.status',
             $data
         );
 
         // Also broadcast to global provisioning channel
         $this->broadcaster->broadcast(
             'provisioning',
-            'project.deletion.status',
+            'site.deletion.status',
             $data
         );
 

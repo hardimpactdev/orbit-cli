@@ -83,17 +83,17 @@ final class ProvisionLogger
             $data['error'] = $error;
         }
 
-        // Broadcast to project-specific channel
+        // Broadcast to site-specific channel
         $this->broadcaster->broadcast(
-            "project.{$this->slug}",
-            'project.provision.status',
+            "site.{$this->slug}",
+            'site.provision.status',
             $data
         );
 
         // Also broadcast to global provisioning channel
         $this->broadcaster->broadcast(
             'provisioning',
-            'project.provision.status',
+            'site.provision.status',
             $data
         );
     }
