@@ -21,6 +21,7 @@ final class SiteCreateCommand extends Command
         {--clone= : Clone existing repository (user/repo or git URL)}
         {--fork : Fork the repository instead of importing as new}
         {--visibility=private : Repository visibility (private/public)}
+        {--organization= : GitHub organization to create the repo under}
         {--path= : Override default site path}
         {--php= : PHP version to use (8.3, 8.4, 8.5)}
         {--db-driver= : Database driver (sqlite, pgsql)}
@@ -114,6 +115,9 @@ final class SiteCreateCommand extends Command
         }
         if ($this->option('fork')) {
             $provisionArgs['--fork'] = true;
+        }
+        if ($organization = $this->option('organization')) {
+            $provisionArgs['--organization'] = $organization;
         }
         if ($this->wantsJson()) {
             $provisionArgs['--json'] = true;
