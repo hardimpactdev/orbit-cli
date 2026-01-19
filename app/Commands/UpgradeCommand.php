@@ -112,27 +112,32 @@ class UpgradeCommand extends Command
                 );
             }
 
-            // Note: We intentionally do NOT update the web app here.
-            // After replacing the binary, the current process still has the old
-            // PHAR loaded in memory. Any attempt to autoload new classes will
-            // cause corruption errors as PHP reads from the replaced file on disk.
-            // The web app will be updated on next `orbit init` or can be updated
-            // manually with `orbit init --upgrade-web`.
+            // CRITICAL: We must exit() immediately after replacing the binary.
+            // The current process still has the old PHAR loaded in memory.
+            // If we return normally, Laravel's terminate() will run and may
+            // autoload classes, causing PHP to read from the new file on disk
+            // using offsets from the old file - resulting in garbage output.
 
             if ($this->wantsJson()) {
-                return $this->outputJsonSuccess([
-                    'action' => 'upgrade',
-                    'previous_version' => $currentVersion,
-                    'new_version' => $latestVersion,
-                    'upgraded' => true,
-                    'message' => 'Run `orbit init` to update the companion web app.',
-                ]);
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'action' => 'upgrade',
+                        'previous_version' => $currentVersion,
+                        'new_version' => $latestVersion,
+                        'upgraded' => true,
+                        'message' => 'Run `orbit init` to update the companion web app.',
+                    ],
+                ], JSON_PRETTY_PRINT)."\n";
+                exit(0);
             }
 
-            $this->info("Successfully upgraded to {$latestVersion}!");
-            $this->info('Run `orbit init` to update the companion web app.');
+            // Use echo instead of $this->info() to avoid any potential autoloading
+            echo "\033[32mSuccessfully upgraded to {$latestVersion}!\033[0m\n";
+            echo "\033[32mRun `orbit init` to update the companion web app.\033[0m\n";
 
-            return self::SUCCESS;
+            // Exit immediately - do NOT return, as that triggers Laravel's terminate()
+            exit(0);
         } finally {
             // Clean up temp file
             if (file_exists($tempFile)) {
