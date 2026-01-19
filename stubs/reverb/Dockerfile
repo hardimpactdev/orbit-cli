@@ -26,4 +26,4 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "-v"]
+CMD ["sh", "-c", "php artisan reverb:start --host=0.0.0.0 --port=${REVERB_PORT:-8080} -v"]

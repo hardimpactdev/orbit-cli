@@ -167,7 +167,14 @@ class InitCommand extends Command
         // 10. Pull service images (in parallel-ish, at least show progress)
         $this->pullImages($dockerManager);
 
-        // 11. Install composer-link globally for package development
+        // 11. Start all services
+        $this->task('Starting services', function () use ($dockerManager) {
+            $dockerManager->startAll();
+
+            return true;
+        });
+
+        // 12. Install composer-link globally for package development
         $this->task('Installing composer-link plugin', function () {
             // Check if already installed
             $checkResult = Process::run('composer global show sandersander/composer-link 2>/dev/null');
@@ -413,7 +420,24 @@ class InitCommand extends Command
             ->path($destPath)
             ->run('php artisan migrate --force');
 
-        return $migrateResult->successful();
+        if (! $migrateResult->successful()) {
+            return false;
+        }
+
+        // Ensure SQLite database exists before seeding
+        $dbPath = "{$destPath}/database.sqlite";
+        if (! File::exists($dbPath)) {
+            File::put($dbPath, '');
+        }
+
+        // Seed local environment using the orbit:init command
+        // Use --name with hostname to avoid interactive prompt
+        $hostname = gethostname() ?: 'Local';
+        $seedResult = Process::timeout(60)
+            ->path($destPath)
+            ->run("php artisan orbit:init --name=\"{$hostname}\"");
+
+        return $seedResult->successful();
     }
 
     protected function copyWebAppDirectory(string $source, string $destination): void
@@ -499,12 +523,14 @@ APP_ENV=production
 APP_KEY={$appKey}
 APP_DEBUG=false
 APP_URL=https://orbit.{$tld}
+ORBIT_MODE=web
 
 LOG_CHANNEL=single
 LOG_LEVEL=error
 
-# Stateless - no database needed
-DB_CONNECTION=null
+# Database for environments/sites
+DB_CONNECTION=sqlite
+DB_DATABASE={$webAppPath}/database.sqlite
 
 # Redis for everything
 REDIS_CLIENT=phpredis
