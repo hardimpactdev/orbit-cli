@@ -11,9 +11,9 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Tool;
 
-class ProjectDeleteTool extends Tool
+class SiteDeleteTool extends Tool
 {
-    protected string $description = 'Delete a project with cascade deletion of GitHub repo and sequence entry';
+    protected string $description = 'Delete a site with cascade deletion of GitHub repo and sequence entry';
 
     /**
      * @return array<string, mixed>
@@ -21,7 +21,7 @@ class ProjectDeleteTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'slug' => $schema->string()->required()->description('Project slug to delete'),
+            'slug' => $schema->string()->required()->description('Site slug to delete'),
             'confirm' => $schema->boolean()->required()->description('Must be true to confirm deletion'),
         ];
     }
@@ -32,7 +32,7 @@ class ProjectDeleteTool extends Tool
         $confirm = $request->get('confirm');
 
         if (! $slug) {
-            return Response::error('Project slug is required');
+            return Response::error('Site slug is required');
         }
 
         if ($confirm !== true) {
@@ -40,14 +40,14 @@ class ProjectDeleteTool extends Tool
         }
 
         // Build the command
-        $command = 'orbit project:delete '.escapeshellarg((string) $slug).' --force --json';
+        $command = 'orbit site:delete '.escapeshellarg((string) $slug).' --force --json';
 
         // Execute the command
         $result = Process::timeout(120)->run($command);
 
         if (! $result->successful()) {
             return Response::error(
-                'Failed to delete project: '.($result->errorOutput() ?: $result->output())
+                'Failed to delete site: '.($result->errorOutput() ?: $result->output())
             );
         }
 
@@ -59,7 +59,7 @@ class ProjectDeleteTool extends Tool
                 return Response::structured([
                     'success' => true,
                     'slug' => $slug,
-                    'message' => $output['data']['message'] ?? 'Project deleted successfully',
+                    'message' => $output['data']['message'] ?? 'Site deleted successfully',
                     'steps' => $output['data']['steps'] ?? [],
                 ]);
             }

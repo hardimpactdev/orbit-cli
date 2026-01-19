@@ -10,4 +10,5 @@ return RectorConfig::configure()
     ])
     ->withPhpSets(php82: true)
     ->withTypeCoverageLevel(0)
-    ->withCache(__DIR__.'/var/cache/rector');
+    ->withCache(__DIR__.'/var/cache/rector')
+    ->withoutParallel();

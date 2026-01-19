@@ -12,9 +12,9 @@ use App\Mcp\Resources\InfrastructureResource;
 use App\Mcp\Resources\SitesResource;
 use App\Mcp\Tools\LogsTool;
 use App\Mcp\Tools\PhpTool;
-use App\Mcp\Tools\ProjectCreateTool;
-use App\Mcp\Tools\ProjectDeleteTool;
 use App\Mcp\Tools\RestartTool;
+use App\Mcp\Tools\SiteCreateTool;
+use App\Mcp\Tools\SiteDeleteTool;
 use App\Mcp\Tools\SitesTool;
 use App\Mcp\Tools\StartTool;
 use App\Mcp\Tools\StatusTool;
@@ -112,9 +112,9 @@ final class OrbitServer extends Server
 
         ## Common Workflows
 
-        1. **Create a new Laravel project**:
-           - Use `orbit_project_create` tool
-           - Project will be provisioned automatically with correct database/cache settings
+        1. **Create a new Laravel site**:
+           - Use `orbit_site_create` tool
+           - Site will be provisioned automatically with correct database/cache settings
 
         2. **Set PHP version for a project**:
            - Use `orbit_php` tool
@@ -140,8 +140,8 @@ final class OrbitServer extends Server
         RestartTool::class,
         SitesTool::class,
         PhpTool::class,
-        ProjectCreateTool::class,
-        ProjectDeleteTool::class,
+        SiteCreateTool::class,
+        SiteDeleteTool::class,
         LogsTool::class,
         WorktreesTool::class,
     ];

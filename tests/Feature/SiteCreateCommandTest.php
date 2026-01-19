@@ -106,32 +106,34 @@ describe('option definitions', function () {
     });
 });
 
-describe('command signature matches provision command', function () {
+describe('command signature matches CreateSiteJob expectations', function () {
     /**
-     * CRITICAL: Verify option names in site:create match what provision expects.
-     * This would have caught the --org vs --organization mismatch.
+     * CRITICAL: Verify option names in site:create match what CreateSiteJob expects.
+     * The job builds commands using these exact option names.
      */
-    it('uses --organization which maps to provision --organization', function () {
-        // site:create has --organization
+    it('has all options that CreateSiteJob uses', function () {
         $siteCreate = $this->app->make(SiteCreateCommand::class);
-        expect($siteCreate->getDefinition()->hasOption('organization'))->toBeTrue();
+        $definition = $siteCreate->getDefinition();
 
-        // provision command also has --organization (verified by checking command exists)
-        $provisionDef = \Illuminate\Support\Facades\Artisan::all()['provision']->getDefinition();
-        expect($provisionDef->hasOption('organization'))->toBeTrue();
-    });
+        // Options used by CreateSiteJob::buildCommand()
+        $jobOptions = [
+            'template',       // --template=
+            'clone',          // --clone=
+            'fork',           // --fork
+            'organization',   // --organization= (CRITICAL: not --org)
+            'visibility',     // --visibility=
+            'path',           // --path=
+            'php',            // --php=
+            'db-driver',      // --db-driver=
+            'session-driver', // --session-driver=
+            'cache-driver',   // --cache-driver=
+            'queue-driver',   // --queue-driver=
+            'json',           // --json
+        ];
 
-    it('has matching driver options with provision command', function () {
-        $siteCreate = $this->app->make(SiteCreateCommand::class);
-        $provisionDef = \Illuminate\Support\Facades\Artisan::all()['provision']->getDefinition();
-
-        $driverOptions = ['php', 'db-driver', 'session-driver', 'cache-driver', 'queue-driver'];
-
-        foreach ($driverOptions as $option) {
-            expect($siteCreate->getDefinition()->hasOption($option))
-                ->toBeTrue("site:create missing --{$option}");
-            expect($provisionDef->hasOption($option))
-                ->toBeTrue("provision missing --{$option}");
+        foreach ($jobOptions as $option) {
+            expect($definition->hasOption($option))
+                ->toBeTrue("site:create missing --{$option} (required by CreateSiteJob)");
         }
     });
 });

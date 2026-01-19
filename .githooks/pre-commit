@@ -12,10 +12,16 @@ fi
 
 echo ""
 echo "Running Rector..."
-./vendor/bin/rector --dry-run
-if [ $? -ne 0 ]; then
-    echo "Rector found issues. Run './vendor/bin/rector' to fix them."
-    exit 1
+# Skip Rector on PHP 8.5+ due to compatibility issues
+PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+if [[ "$PHP_VERSION" == "8.5" ]]; then
+    echo "Skipping Rector on PHP $PHP_VERSION (known compatibility issues)"
+else
+    ./vendor/bin/rector --dry-run
+    if [ $? -ne 0 ]; then
+        echo "Rector found issues. Run './vendor/bin/rector' to fix them."
+        exit 1
+    fi
 fi
 
 echo ""

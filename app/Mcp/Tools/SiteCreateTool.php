@@ -11,9 +11,9 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\ResponseFactory;
 use Laravel\Mcp\Server\Tool;
 
-class ProjectCreateTool extends Tool
+class SiteCreateTool extends Tool
 {
-    protected string $description = 'Create a new project with optional GitHub template';
+    protected string $description = 'Create a new site with optional GitHub template';
 
     /**
      * @return array<string, mixed>
@@ -21,7 +21,7 @@ class ProjectCreateTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'name' => $schema->string()->required()->description('Project name/slug'),
+            'name' => $schema->string()->required()->description('Site name/slug'),
             'template' => $schema->string()->description('GitHub template repository (user/repo format)'),
             'visibility' => $schema->string()->enum(['private', 'public'])->description('Repository visibility'),
         ];
@@ -34,11 +34,11 @@ class ProjectCreateTool extends Tool
         $visibility = $request->get('visibility', 'private');
 
         if (! $name) {
-            return Response::error('Project name is required');
+            return Response::error('Site name is required');
         }
 
         // Build the command
-        $command = 'orbit project:create '.escapeshellarg((string) $name);
+        $command = 'orbit site:create '.escapeshellarg((string) $name);
 
         if ($template) {
             $command .= ' --template='.escapeshellarg((string) $template);
@@ -52,7 +52,7 @@ class ProjectCreateTool extends Tool
 
         if (! $result->successful()) {
             return Response::error(
-                'Failed to create project: '.($result->errorOutput() ?: $result->output())
+                'Failed to create site: '.($result->errorOutput() ?: $result->output())
             );
         }
 
@@ -63,9 +63,9 @@ class ProjectCreateTool extends Tool
             if (isset($output['success']) && $output['success']) {
                 return Response::structured([
                     'success' => true,
-                    'project_slug' => $output['data']['project_slug'] ?? $name,
+                    'site_slug' => $output['data']['site_slug'] ?? $name,
                     'status' => $output['data']['status'] ?? 'unknown',
-                    'message' => $output['data']['message'] ?? 'Project created successfully',
+                    'message' => $output['data']['message'] ?? 'Site created successfully',
                 ]);
             }
 

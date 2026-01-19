@@ -22,4 +22,4 @@ parameters:
 			message: '#^If condition is always false\.$#'
 			identifier: if.alwaysFalse
 			count: 1
-			path: app/Commands/ProvisionCommand.php
+			path: app/Commands/SiteCreateCommand.php

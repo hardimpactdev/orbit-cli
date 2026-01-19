@@ -46,8 +46,8 @@ it('registers all expected tools', function () {
     expect($toolNames)->toContain('RestartTool');
     expect($toolNames)->toContain('SitesTool');
     expect($toolNames)->toContain('PhpTool');
-    expect($toolNames)->toContain('ProjectCreateTool');
-    expect($toolNames)->toContain('ProjectDeleteTool');
+    expect($toolNames)->toContain('SiteCreateTool');
+    expect($toolNames)->toContain('SiteDeleteTool');
     expect($toolNames)->toContain('LogsTool');
     expect($toolNames)->toContain('WorktreesTool');
 });

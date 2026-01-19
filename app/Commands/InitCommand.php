@@ -403,7 +403,16 @@ class InitCommand extends Command
             ->path($destPath)
             ->run('composer install --no-dev --no-interaction --optimize-autoloader');
 
-        return $result->successful();
+        if (! $result->successful()) {
+            return false;
+        }
+
+        // Run migrations
+        $migrateResult = Process::timeout(60)
+            ->path($destPath)
+            ->run('php artisan migrate --force');
+
+        return $migrateResult->successful();
     }
 
     protected function copyWebAppDirectory(string $source, string $destination): void
