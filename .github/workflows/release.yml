@@ -37,6 +37,8 @@ jobs:
         run: |
           # Remove local path repository that only exists in dev environment
           composer config --unset repositories.0
+          # Delete lock file to force fresh resolution from packagist
+          rm -f composer.lock
           
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader --prefer-dist

@@ -61,6 +61,7 @@ jobs:
         run: |
           cd orbit-cli
           composer config --unset repositories.0
+          rm -f composer.lock
           composer install --no-dev --optimize-autoloader --prefer-dist
 
       - name: Download Box
