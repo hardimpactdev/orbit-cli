@@ -33,15 +33,16 @@ it('shows status with all services running', function () {
 
     $this->serviceManager->shouldReceive('getEnabled')->andReturn([
         'dns' => ['enabled' => true],
-        'caddy' => ['enabled' => true],
         'postgres' => ['enabled' => true],
         'redis' => ['enabled' => true],
         'mailpit' => ['enabled' => true],
     ]);
 
+    // Caddy runs on host, not Docker
+    $this->caddyManager->shouldReceive('isRunning')->andReturn(true);
+
     $this->dockerManager->shouldReceive('getAllStatuses')->andReturn([
         'dns' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-dns'],
-        'caddy' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-caddy'],
         'postgres' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-postgres'],
         'redis' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-redis'],
         'mailpit' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-mailpit'],
@@ -66,15 +67,16 @@ it('shows status with all services stopped', function () {
 
     $this->serviceManager->shouldReceive('getEnabled')->andReturn([
         'dns' => ['enabled' => true],
-        'caddy' => ['enabled' => true],
         'postgres' => ['enabled' => true],
         'redis' => ['enabled' => true],
         'mailpit' => ['enabled' => true],
     ]);
 
+    // Caddy runs on host, not Docker
+    $this->caddyManager->shouldReceive('isRunning')->andReturn(false);
+
     $this->dockerManager->shouldReceive('getAllStatuses')->andReturn([
         'dns' => ['running' => false, 'health' => null, 'container' => 'orbit-dns'],
-        'caddy' => ['running' => false, 'health' => null, 'container' => 'orbit-caddy'],
         'postgres' => ['running' => false, 'health' => null, 'container' => 'orbit-postgres'],
         'redis' => ['running' => false, 'health' => null, 'container' => 'orbit-redis'],
         'mailpit' => ['running' => false, 'health' => null, 'container' => 'orbit-mailpit'],
@@ -97,15 +99,16 @@ it('outputs json when --json flag is used', function () {
 
     $this->serviceManager->shouldReceive('getEnabled')->andReturn([
         'dns' => ['enabled' => true],
-        'caddy' => ['enabled' => true],
         'postgres' => ['enabled' => true],
         'redis' => ['enabled' => true],
         'mailpit' => ['enabled' => true],
     ]);
 
+    // Caddy runs on host, not Docker
+    $this->caddyManager->shouldReceive('isRunning')->andReturn(true);
+
     $this->dockerManager->shouldReceive('getAllStatuses')->andReturn([
         'dns' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-dns'],
-        'caddy' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-caddy'],
         'postgres' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-postgres'],
         'redis' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-redis'],
         'mailpit' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-mailpit'],

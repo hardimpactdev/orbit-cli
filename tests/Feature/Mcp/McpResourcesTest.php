@@ -6,6 +6,7 @@ use App\Mcp\Resources\ConfigResource;
 use App\Mcp\Resources\EnvTemplateResource;
 use App\Mcp\Resources\InfrastructureResource;
 use App\Mcp\Resources\SitesResource;
+use App\Services\CaddyManager;
 use App\Services\ConfigManager;
 use App\Services\DatabaseService;
 use App\Services\DockerManager;
@@ -21,12 +22,14 @@ beforeEach(function () {
     $this->siteScanner = Mockery::mock(SiteScanner::class);
     $this->databaseService = Mockery::mock(DatabaseService::class);
     $this->phpManager = Mockery::mock(PhpManager::class);
+    $this->caddyManager = Mockery::mock(CaddyManager::class);
 
     $this->app->instance(ConfigManager::class, $this->configManager);
     $this->app->instance(DockerManager::class, $this->dockerManager);
     $this->app->instance(SiteScanner::class, $this->siteScanner);
     $this->app->instance(DatabaseService::class, $this->databaseService);
     $this->app->instance(PhpManager::class, $this->phpManager);
+    $this->app->instance(CaddyManager::class, $this->caddyManager);
 });
 
 describe('InfrastructureResource', function () {
@@ -44,6 +47,8 @@ describe('InfrastructureResource', function () {
         $this->dockerManager->shouldReceive('isRunning')->andReturn(true);
         $this->dockerManager->shouldReceive('getHealthStatus')->andReturn('healthy');
         $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
+        // Caddy runs on host
+        $this->caddyManager->shouldReceive('isRunning')->andReturn(true);
         // Mock PHP-FPM detection (returns false = FrankenPHP mode)
         $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
 
@@ -66,6 +71,8 @@ describe('InfrastructureResource', function () {
             ->withAnyArgs()->andReturn(true);
         $this->dockerManager->shouldReceive('getHealthStatus')->andReturn('healthy');
         $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
+        // Caddy runs on host
+        $this->caddyManager->shouldReceive('isRunning')->andReturn(true);
         // Mock PHP-FPM detection (returns false = FrankenPHP mode)
         $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
 

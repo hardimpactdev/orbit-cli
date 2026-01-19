@@ -326,7 +326,8 @@ class InitCommand extends Command
 
     protected function pullImages(DockerManager $dockerManager): void
     {
-        $services = ['caddy', 'postgres', 'redis', 'mailpit'];
+        // Note: Caddy runs on the host, not in Docker
+        $services = ['postgres', 'redis', 'mailpit'];
 
         foreach ($services as $service) {
             $this->task("Pulling {$service} image", function () use ($dockerManager, $service) {

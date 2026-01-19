@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Resources;
 
+use App\Services\CaddyManager;
 use App\Services\ConfigManager;
 use App\Services\DockerManager;
 use App\Services\PhpManager;
@@ -21,6 +22,7 @@ class InfrastructureResource extends Resource
         protected DockerManager $dockerManager,
         protected ConfigManager $configManager,
         protected PhpManager $phpManager,
+        protected CaddyManager $caddyManager,
     ) {}
 
     public function name(): string
@@ -48,9 +50,9 @@ class InfrastructureResource extends Resource
         $healthyCount = 0;
 
         // Core Docker containers (same for both architectures)
+        // Note: Caddy runs on the host, not in Docker
         $coreContainers = [
             'dns' => 'orbit-dns',
-            'caddy' => 'orbit-caddy',
             'postgres' => 'orbit-postgres',
             'redis' => 'orbit-redis',
             'mailpit' => 'orbit-mailpit',
@@ -75,6 +77,18 @@ class InfrastructureResource extends Resource
                     $healthyCount++;
                 }
             }
+        }
+
+        // Caddy runs on the host, not in Docker
+        $caddyRunning = $this->caddyManager->isRunning();
+        $services['caddy'] = [
+            'type' => 'host-service',
+            'status' => $caddyRunning ? 'running' : 'stopped',
+            'ports' => ['80/tcp', '443/tcp'],
+        ];
+        if ($caddyRunning) {
+            $runningCount++;
+            $healthyCount++;
         }
 
         // PHP services - depends on architecture
@@ -171,7 +185,6 @@ class InfrastructureResource extends Resource
     {
         $portsMap = [
             'orbit-dns' => ['53/udp', '53/tcp'],
-            'orbit-caddy' => ['80/tcp', '443/tcp'],
             'orbit-postgres' => ['5432/tcp'],
             'orbit-redis' => ['6379/tcp'],
             'orbit-mailpit' => ['1025/tcp', '8025/tcp'],
