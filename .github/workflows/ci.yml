@@ -24,7 +24,7 @@ jobs:
 
       - name: Remove local path repository for CI
         run: |
-          composer config --unset repositories.0
+          jq 'del(.repositories)' composer.json > composer.tmp && mv composer.tmp composer.json
           rm -f composer.lock
           
       - name: Install dependencies

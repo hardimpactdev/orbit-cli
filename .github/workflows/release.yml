@@ -36,7 +36,7 @@ jobs:
       - name: Remove local path repository for CI
         run: |
           # Remove local path repository that only exists in dev environment
-          composer config --unset repositories.0
+          jq 'del(.repositories)' composer.json > composer.tmp && mv composer.tmp composer.json
           # Delete lock file to force fresh resolution from packagist
           rm -f composer.lock
           
