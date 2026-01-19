@@ -112,11 +112,16 @@ class UpgradeCommand extends Command
                 );
             }
 
-            // CRITICAL: We must exit() immediately after replacing the binary.
-            // The current process still has the old PHAR loaded in memory.
-            // If we return normally, Laravel's terminate() will run and may
-            // autoload classes, causing PHP to read from the new file on disk
-            // using offsets from the old file - resulting in garbage output.
+            // CRITICAL: After replacing the binary, we must terminate IMMEDIATELY.
+            // The current process has the old PHAR loaded in memory. Any PHP shutdown
+            // sequence (destructors, shutdown handlers, finally blocks) can trigger
+            // autoloading, which reads from the NEW file using OLD offsets = garbage.
+            //
+            // We use posix_kill(SIGKILL) to terminate without ANY cleanup.
+            // The temp file will be cleaned up by the OS eventually.
+
+            // Clean up temp file BEFORE we terminate
+            @unlink($tempFile);
 
             if ($this->wantsJson()) {
                 echo json_encode([
@@ -129,17 +134,26 @@ class UpgradeCommand extends Command
                         'message' => 'Run `orbit init` to update the companion web app.',
                     ],
                 ], JSON_PRETTY_PRINT)."\n";
-                exit(0);
+            } else {
+                echo "\033[32mSuccessfully upgraded to {$latestVersion}!\033[0m\n";
+                echo "\033[32mRun `orbit init` to update the companion web app.\033[0m\n";
             }
 
-            // Use echo instead of $this->info() to avoid any potential autoloading
-            echo "\033[32mSuccessfully upgraded to {$latestVersion}!\033[0m\n";
-            echo "\033[32mRun `orbit init` to update the companion web app.\033[0m\n";
+            // Flush all output buffers to ensure message is displayed
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+            flush();
 
-            // Exit immediately - do NOT return, as that triggers Laravel's terminate()
+            // SIGKILL (9) terminates immediately - no destructors, no shutdown handlers
+            if (function_exists('posix_kill')) {
+                posix_kill(posix_getpid(), 9);
+            }
+
+            // Fallback for systems without posix extension
             exit(0);
         } finally {
-            // Clean up temp file
+            // This should not run if posix_kill worked, but just in case
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
