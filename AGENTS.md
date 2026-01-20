@@ -67,7 +67,8 @@ After fixes verified (all tests pass):
 2. Create tag: `git tag v0.x.y`
 3. Push tag: `git push origin v0.x.y`
 4. GitHub Actions builds PHAR and creates release
-5. Update local: `orbit upgrade` (or pull latest for symlink setup)
+5. Verify release assets include `orbit.phar`
+6. Update local: `orbit upgrade` (or pull latest for symlink setup)
 
 ## Platform Support
 
