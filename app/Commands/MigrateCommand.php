@@ -9,9 +9,9 @@ use PDO;
 
 class MigrateCommand extends Command
 {
-    protected $signature = 'migrate {--dry-run : Show what would be done without making changes}';
+    protected $signature = 'schema:migrate {--dry-run : Show what would be done without making changes}';
 
-    protected $description = 'Migrate the database schema to the latest version';
+    protected $description = 'Migrate legacy CLI database schema (projects table to sites table)';
 
     public function handle(DatabaseService $databaseService): int
     {
@@ -44,6 +44,27 @@ class MigrateCommand extends Command
         if ($hasProjectsTable) {
             $this->info('Migrating projects table (migration) to sites table...');
 
+            // Detect if projects table uses 'slug' or 'name' column
+            $stmt = $db->query('PRAGMA table_info(projects)');
+            $projectColumns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $hasSlugColumn = false;
+            $hasNameColumn = false;
+            foreach ($projectColumns as $column) {
+                if ($column['name'] === 'slug') {
+                    $hasSlugColumn = true;
+                }
+                if ($column['name'] === 'name') {
+                    $hasNameColumn = true;
+                }
+            }
+
+            // If projects table has neither slug nor name, we can't migrate
+            if (! $hasSlugColumn && ! $hasNameColumn) {
+                $this->warn('Projects table has no slug or name column. Skipping migration.');
+
+                return self::SUCCESS;
+            }
+
             if (! $this->option('dry-run')) {
                 // Create backup
                 $timestamp = date('YmdHis');
@@ -51,16 +72,25 @@ class MigrateCommand extends Command
                 File::copy($dbPath, $backupPath);
                 $this->info("Backup created: {$backupPath}");
 
+                // Build select query based on available columns
+                $slugSource = $hasSlugColumn ? 'slug' : 'name';
+
                 if ($hasSitesTable) {
                     $this->warn('Sites table already exists. Merging data from projects table (migration)...');
                     // Merge data from projects into sites, ignoring duplicates
-                    $db->exec('INSERT OR IGNORE INTO sites (slug, path, php_version, created_at, updated_at) SELECT slug, path, php_version, created_at, updated_at FROM projects');
+                    $db->exec("INSERT OR IGNORE INTO sites (slug, path, php_version, created_at, updated_at) SELECT {$slugSource}, path, php_version, created_at, updated_at FROM projects");
                     $db->exec('DROP TABLE projects');
                     $this->info('Data merged and projects table (migration) dropped.');
                 } else {
-                    // Rename table
+                    // Rename table and possibly rename column
                     $db->exec('ALTER TABLE projects RENAME TO sites');
                     $this->info('Table projects renamed to sites.');
+
+                    // If old table used 'name', rename column to 'slug'
+                    if (! $hasSlugColumn) {
+                        $db->exec('ALTER TABLE sites RENAME COLUMN name TO slug');
+                        $this->info('Renamed column name to slug.');
+                    }
                 }
 
                 // Ensure project_id column exists

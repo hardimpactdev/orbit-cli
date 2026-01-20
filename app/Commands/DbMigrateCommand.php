@@ -31,9 +31,12 @@ class DbMigrateCommand extends Command
             ], $this->output);
         }
 
+        // First run legacy schema migration (projects -> sites table)
+        Artisan::call('schema:migrate', [], $this->output);
+
         $this->info('Running migrations...');
 
-        $result = Artisan::call('migrate', [], $this->output);
+        $result = Artisan::call('migrate', ['--force' => true], $this->output);
 
         if ($result === 0 && $this->option('seed')) {
             Artisan::call('db:seed', ['--force' => true], $this->output);
