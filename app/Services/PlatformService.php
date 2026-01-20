@@ -195,6 +195,15 @@ class PlatformService
         // Check if port 53 is in use
         $port53InUse = $this->isPortInUse(53);
 
+        // Check if orbit-dns is already running and owns port 53
+        if ($port53InUse && $this->isOrbitDnsRunning()) {
+            return [
+                'status' => 'orbit_dns_running',
+                'message' => "Orbit DNS is running and handles .{$tld} domains",
+                'port_53_in_use' => true,
+            ];
+        }
+
         // Check for existing dnsmasq on macOS
         if ($this->isMacOS()) {
             $hasDnsmasqResolver = $this->hasDnsmasqResolverForTld($tld);
@@ -259,6 +268,28 @@ class PlatformService
         }
 
         return $result->successful() && trim($result->output()) !== '';
+    }
+
+    /**
+     * Check if the orbit-dns container is running and using port 53.
+     */
+    public function isOrbitDnsRunning(): bool
+    {
+        $result = Process::run('docker ps -q -f name=orbit-dns');
+
+        return $result->successful() && trim($result->output()) !== '';
+    }
+
+    /**
+     * Check if port 53 is being used by orbit-dns specifically.
+     */
+    public function isPort53OwnedByOrbitDns(): bool
+    {
+        if (! $this->isPortInUse(53)) {
+            return false;
+        }
+
+        return $this->isOrbitDnsRunning();
     }
 
     // ===========================================

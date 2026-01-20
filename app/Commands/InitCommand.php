@@ -291,6 +291,11 @@ class InitCommand extends Command
         $tld = $configManager->getTld();
         $dnsStatus = $platformService->getDnsStatus($tld);
 
+        // Orbit DNS is already running - perfect, nothing to do
+        if (($dnsStatus['status'] ?? '') === 'orbit_dns_running') {
+            return true;
+        }
+
         // On macOS with existing dnsmasq for this TLD, we're good
         if (($dnsStatus['status'] ?? '') === 'dnsmasq_configured') {
             return true;
@@ -320,7 +325,7 @@ class InitCommand extends Command
             return true;
         }
 
-        // Port 53 in use by something else
+        // Port 53 in use by something else (not orbit-dns)
         if (($dnsStatus['status'] ?? '') === 'port_53_conflict') {
             warning('Port 53 is in use by another process. Docker DNS may not work.');
             $this->line('  Please free port 53 or configure your system DNS to point to 127.0.0.1');
@@ -351,22 +356,27 @@ class InitCommand extends Command
     protected function showCompletionMessage(PlatformService $platformService, ConfigManager $configManager): void
     {
         $tld = $configManager->getTld();
+        $dnsStatus = $platformService->getDnsStatus($tld);
 
-        if ($platformService->isMacOS()) {
-            warning('Configure your DNS to point to 127.0.0.1:');
-            $this->line('  System Settings → Network → Wi-Fi → Details → DNS');
-            $this->line('  Or: sudo networksetup -setdnsservers Wi-Fi 127.0.0.1');
-        } elseif ($platformService->isLinux()) {
-            // Check if we configured DNS
-            if ($platformService->isSystemdResolvedStubDisabled()) {
-                $this->line('<fg=green>DNS configured automatically via systemd-resolved.</>');
-            } else {
-                warning('Ensure /etc/resolv.conf points to 127.0.0.1');
-                $this->line('  Or configure systemd-resolved manually.');
+        // Check if DNS is already working (orbit-dns running or dnsmasq configured)
+        $dnsReady = in_array($dnsStatus['status'] ?? '', ['orbit_dns_running', 'dnsmasq_configured', 'ready']);
+
+        if (! $dnsReady) {
+            if ($platformService->isMacOS()) {
+                warning('Configure your DNS to point to 127.0.0.1:');
+                $this->line('  System Settings → Network → Wi-Fi → Details → DNS');
+                $this->line('  Or: sudo networksetup -setdnsservers Wi-Fi 127.0.0.1');
+            } elseif ($platformService->isLinux()) {
+                if ($platformService->isSystemdResolvedStubDisabled()) {
+                    $this->line('<fg=green>DNS configured automatically via systemd-resolved.</>');
+                } else {
+                    warning('Ensure /etc/resolv.conf points to 127.0.0.1');
+                    $this->line('  Or configure systemd-resolved manually.');
+                }
             }
+            $this->newLine();
         }
 
-        $this->newLine();
         info('Done! Run: orbit start');
         $this->line("  Your sites will be available at https://*.{$tld}");
     }
