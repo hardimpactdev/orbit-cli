@@ -14,6 +14,10 @@ class TrustCommand extends Command
 
     public function handle(DockerManager $dockerManager): int
     {
+        $this->warn('⚠️  The "trust" command is deprecated and will be removed in a future version.');
+        $this->line('   Please use "orbit trust-root-ca" instead.');
+        $this->newLine();
+
         $this->info('Installing Caddy root CA certificate...');
 
         // Check if Caddy container is running (uses batched cache if available)

@@ -34,6 +34,10 @@ class InitCommand extends Command
         CaddyfileGenerator $caddyfileGenerator,
         PlatformService $platformService
     ): int {
+        $this->warn('⚠️  The "init" command is deprecated and will be removed in a future version.');
+        $this->line('   Please use "orbit install" instead.');
+        $this->newLine();
+
         $this->autoConfirm = $this->option('yes');
 
         info('Initializing Orbit...');

@@ -32,6 +32,10 @@ class SetupCommand extends Command
         PhpManager $phpManager,
         PlatformService $platformService
     ): int {
+        $this->warn('⚠️  The "setup" command is deprecated and will be removed in a future version.');
+        $this->line('   Please use "orbit install" instead.');
+        $this->newLine();
+
         $platform = PHP_OS_FAMILY;
 
         // Parse options
