@@ -44,11 +44,12 @@ class MigrateCommand extends Command
         if ($hasProjectsTable) {
             $this->info('Migrating projects table (migration) to sites table...');
 
-            // Detect if projects table uses 'slug' or 'name' column
+            // Detect projects table structure
             $stmt = $db->query('PRAGMA table_info(projects)');
             $projectColumns = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $hasSlugColumn = false;
             $hasNameColumn = false;
+            $hasPathColumn = false;
             foreach ($projectColumns as $column) {
                 if ($column['name'] === 'slug') {
                     $hasSlugColumn = true;
@@ -56,6 +57,17 @@ class MigrateCommand extends Command
                 if ($column['name'] === 'name') {
                     $hasNameColumn = true;
                 }
+                if ($column['name'] === 'path') {
+                    $hasPathColumn = true;
+                }
+            }
+
+            // If projects table has no 'path' column, it's the orbit-core projects table
+            // (for GitHub repos), not the legacy CLI sites table. Skip migration.
+            if (! $hasPathColumn) {
+                $this->info('Projects table is orbit-core table (not legacy CLI). No migration needed.');
+
+                return self::SUCCESS;
             }
 
             // If projects table has neither slug nor name, we can't migrate
