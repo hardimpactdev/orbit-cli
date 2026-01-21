@@ -12,7 +12,7 @@ beforeEach(function () {
 });
 
 it('lists all sites', function () {
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([
+    $this->siteScanner->shouldReceive('scan')->andReturn([
         ['name' => 'mysite', 'domain' => 'mysite.test', 'path' => '/path/to/mysite', 'php_version' => '8.3', 'has_custom_php' => false, 'has_public_folder' => true],
         ['name' => 'another', 'domain' => 'another.test', 'path' => '/path/to/another', 'php_version' => '8.4', 'has_custom_php' => true, 'has_public_folder' => true],
     ]);
@@ -25,7 +25,7 @@ it('lists all sites', function () {
 });
 
 it('shows warning when no sites found', function () {
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([]);
+    $this->siteScanner->shouldReceive('scan')->andReturn([]);
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
 
     $this->artisan('sites')
@@ -34,7 +34,7 @@ it('shows warning when no sites found', function () {
 });
 
 it('outputs json when --json flag is used', function () {
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([
+    $this->siteScanner->shouldReceive('scan')->andReturn([
         ['name' => 'mysite', 'domain' => 'mysite.test', 'path' => '/path/to/mysite', 'php_version' => '8.3', 'has_custom_php' => false, 'has_public_folder' => true],
     ]);
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');

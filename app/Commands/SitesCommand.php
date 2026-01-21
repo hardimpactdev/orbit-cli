@@ -17,7 +17,7 @@ class SitesCommand extends Command
 
     public function handle(SiteScanner $siteScanner, ConfigManager $configManager): int
     {
-        $sites = $siteScanner->scanSites();
+        $sites = $siteScanner->scan(); // Changed from scanSites() to get ALL sites
         $defaultPhp = $configManager->getDefaultPhpVersion();
 
         if ($this->wantsJson()) {

@@ -52,6 +52,7 @@ class SiteScanner
                         $site['secure'] = true;
                     }
 
+                    $this->databaseService->setSitePath($name, $site['path']);
                     $sites[] = $site;
                 }
             }
@@ -98,9 +99,13 @@ class SiteScanner
                     $site['secure'] = true;
                 }
 
+                $this->databaseService->setSitePath($name, $site['path']);
                 $sites[] = $site;
             }
         }
+
+        // Clean up orphan sites (in DB but not found on disk)
+        $this->cleanupOrphanSites($seenNames);
 
         usort($sites, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
@@ -177,6 +182,41 @@ class SiteScanner
     }
 
     /**
+     * Find a site's path, using stored path if valid, otherwise rescanning.
+     */
+    public function findSitePath(string $slug): ?string
+    {
+        // Check stored path first (fast path)
+        $storedPath = $this->databaseService->getSitePath($slug);
+
+        if ($storedPath && is_dir($storedPath)) {
+            return $storedPath;
+        }
+
+        // Path missing or invalid - rescan to find new location
+        // scan() will update the stored path if found
+        $site = $this->findSite($slug);
+
+        return $site['path'] ?? null;
+    }
+
+    /**
+     * Clean up orphan sites (in DB but not found on disk).
+     *
+     * @param  array<string, bool>  $foundSites
+     */
+    protected function cleanupOrphanSites(array $foundSites): void
+    {
+        $dbSlugs = $this->databaseService->getAllSiteSlugs();
+
+        foreach ($dbSlugs as $slug) {
+            if (! isset($foundSites[$slug])) {
+                $this->databaseService->deleteSite($slug);
+            }
+        }
+    }
+
+    /**
      * Get display name for a site from .env APP_NAME or generate from slug.
      */
     protected function getDisplayName(string $directory, string $slug): string
@@ -249,6 +289,15 @@ class SiteScanner
         // Laravel Zero or other CLI app
         if ($hasArtisan) {
             return 'cli';
+        }
+
+        // Check for Laravel Zero CLI apps (they don't have artisan but have app/Commands)
+        if (File::exists($composerJson)) {
+            $composer = json_decode(File::get($composerJson), true);
+            if (isset($composer['require']['laravel-zero/framework']) ||
+                (File::isDirectory($directory.'/app/Commands') && ! $hasPublicFolder)) {
+                return 'cli';
+            }
         }
 
         // Generic PHP project with web interface
