@@ -156,6 +156,9 @@ class WebInstallCommand extends Command
         }
         $appKey = $appKey ?: 'base64:'.base64_encode(random_bytes(32));
 
+        // Get the installed CLI path
+        $cliPath = getenv('HOME').'/.local/bin/orbit';
+
         $env = <<<ENV
 APP_NAME=Orbit
 APP_ENV=production
@@ -170,6 +173,9 @@ LOG_LEVEL=error
 ORBIT_MODE=cli
 DB_CONNECTION=sqlite
 DB_DATABASE={$configManager->getConfigPath()}/database.sqlite
+
+# Orbit CLI path
+ORBIT_CLI_PATH={$cliPath}
 
 # Redis
 REDIS_CLIENT=phpredis
