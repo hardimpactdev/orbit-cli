@@ -94,6 +94,53 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit provision <slug>` | Background provisioning (internal) |
 | `orbit provision:status <slug>` | Check provisioning status |
 | `orbit reverb:setup` | Setup Reverb WebSocket service |
+| `orbit mcp:start orbit` | Start MCP server for AI tool integration |
+
+## MCP (Model Context Protocol)
+
+Orbit provides an MCP server for AI tool integration, enabling AI assistants like Claude Code to interact with your local development environment.
+
+### Setup for Claude Code
+
+Add to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "orbit": {
+      "command": "orbit",
+      "args": ["mcp:start", "orbit"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `orbit_status` | Get service status and running containers |
+| `orbit_start` | Start all Docker services |
+| `orbit_stop` | Stop all Docker services |
+| `orbit_restart` | Restart all Docker services |
+| `orbit_sites` | List all registered sites |
+| `orbit_php` | Get/set PHP version for a site |
+| `orbit_site_create` | Create a new site |
+| `orbit_site_delete` | Delete a site |
+| `orbit_logs` | Get container logs |
+| `orbit_worktrees` | List git worktrees |
+
+### Resources
+
+- `orbit://config` - Current Orbit configuration
+- `orbit://sites` - All registered sites
+- `orbit://infrastructure` - Service status and health
+- `orbit://env-template/{type}` - Environment variable templates
+
+### Prompts
+
+- `configure-laravel-env` - Guide for Laravel .env configuration
+- `setup-horizon` - Laravel Horizon setup guide
 
 ## Services & Ports
 
