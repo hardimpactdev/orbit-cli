@@ -3,6 +3,7 @@ date: 2026-01-22
 problem_type: build_error
 component: orbit-cli/phar-build
 severity: critical
+status: fixed
 symptoms:
   - "PHP Fatal error: Uncaught Error: Class \"HardImpact\\Orbit\\OrbitServiceProvider\" not found"
   - "Error occurs in phar:///path/to/orbit.phar/vendor/laravel/framework/src/Illuminate/Foundation/Application.php:961"
@@ -37,28 +38,34 @@ The error occurs when `DatabaseServiceProvider` tries to register `OrbitServiceP
 Laravel Zero has orbit-core listed in composer.json's `extra.laravel.dont-discover` array, preventing automatic service provider discovery. When the PHAR is built, the package files may be included but the autoloader doesn't properly register the namespace.
 
 ## Solution
-**Temporary Workaround**: Use development installation instead of PHAR:
+**✅ FIXED**: The issue was resolved by adding proper logger configuration.
 
-```bash
-# Install from source
-cd ~/projects/orbit-cli
-cp orbit ~/.local/bin/orbit
-chmod +x ~/.local/bin/orbit
+**Root Issue**: Laravel Zero's PHAR environment expected a logger with a `channel()` method, but the default PSR NullLogger doesn't have this method.
 
-# This runs PHP directly, not the PHAR
-orbit --version
+**The Fix**: Created `/home/nckrtl/projects/orbit-cli/config/logging.php` with proper null logger configuration:
+
+```php
+<?php
+
+return [
+    'default' => 'null',
+    
+    'channels' => [
+        'null' => [
+            'driver' => 'monolog',
+            'handler' => Monolog\Handler\NullHandler::class,
+        ],
+    ],
+];
 ```
 
-**What We've Tried**:
+**What We Did**:
 1. ✅ Removed orbit-core from `dont-discover` array in composer.json
-2. ✅ Removed manual registration of OrbitServiceProvider in DatabaseServiceProvider
-3. ❌ Still fails with "Call to undefined method Psr\Log\NullLogger::channel()"
+2. ✅ Removed manual registration of OrbitServiceProvider in DatabaseServiceProvider  
+3. ✅ Added config/logging.php with null logger configuration
+4. ✅ PHAR now builds and runs successfully
 
-**Permanent Fix** (needs investigation):
-1. Investigate Laravel Zero's PHAR build process for external packages
-2. May need custom Box hooks to properly include orbit-core
-3. Consider bundling orbit-core directly in orbit-cli instead of as a package
-4. Research Laravel Zero community solutions for similar issues
+**Result**: The PHAR is now fully functional at `~/.local/bin/orbit`
 
 ## Prevention
 - Test PHAR builds whenever updating critical dependencies
