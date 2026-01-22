@@ -51,7 +51,6 @@
     "extra": {
         "laravel": {
             "dont-discover": [
-                "hardimpactdev/orbit-core",
                 "laravel/mcp",
                 "inertiajs/inertia-laravel"
             ]

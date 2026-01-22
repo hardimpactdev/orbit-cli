@@ -2,15 +2,13 @@
 
 namespace App\Providers;
 
-use HardImpact\Orbit\OrbitServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
 class DatabaseServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Register orbit-core's service provider to load migrations
-        $this->app->register(OrbitServiceProvider::class);
+        //
     }
 
     public function boot(): void

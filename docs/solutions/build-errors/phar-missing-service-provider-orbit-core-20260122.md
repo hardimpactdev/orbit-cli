@@ -42,16 +42,23 @@ Laravel Zero has orbit-core listed in composer.json's `extra.laravel.dont-discov
 ```bash
 # Install from source
 cd ~/projects/orbit-cli
-ln -sf $(pwd)/orbit ~/.local/bin/orbit-dev
+cp orbit ~/.local/bin/orbit
+chmod +x ~/.local/bin/orbit
 
-# Use orbit-dev instead of orbit
-orbit-dev --version
+# This runs PHP directly, not the PHAR
+orbit --version
 ```
 
+**What We've Tried**:
+1. ✅ Removed orbit-core from `dont-discover` array in composer.json
+2. ✅ Removed manual registration of OrbitServiceProvider in DatabaseServiceProvider
+3. ❌ Still fails with "Call to undefined method Psr\Log\NullLogger::channel()"
+
 **Permanent Fix** (needs investigation):
-1. Remove orbit-core from `dont-discover` array in composer.json
-2. OR manually register the autoloader in the PHAR build process
-3. OR investigate Laravel Zero PHAR build hooks for custom package inclusion
+1. Investigate Laravel Zero's PHAR build process for external packages
+2. May need custom Box hooks to properly include orbit-core
+3. Consider bundling orbit-core directly in orbit-cli instead of as a package
+4. Research Laravel Zero community solutions for similar issues
 
 ## Prevention
 - Test PHAR builds whenever updating critical dependencies
