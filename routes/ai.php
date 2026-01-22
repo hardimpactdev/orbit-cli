@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Mcp\Servers\OrbitServer;
+use HardImpact\Orbit\Mcp\OrbitServer;
 use Laravel\Mcp\Facades\Mcp;
 
 /*
@@ -13,6 +13,8 @@ use Laravel\Mcp\Facades\Mcp;
 | Register MCP servers for AI tool integration. The 'orbit' server
 | provides access to Docker infrastructure, site management, and
 | environment configuration.
+|
+| The MCP server implementation lives in orbit-core and is imported here.
 |
 | Usage: orbit mcp:start orbit
 |
