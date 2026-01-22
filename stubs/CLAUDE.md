@@ -45,9 +45,21 @@ docker compose -f ~/.config/orbit/postgres/docker-compose.yml down
 
 # View logs
 docker logs -f orbit-php-83
-docker logs -f orbit-caddy
 docker logs -f orbit-redis
 docker logs -f orbit-horizon
+```
+
+## Host Services (systemd)
+
+Caddy runs on the host machine via systemd, not in Docker:
+
+```bash
+# Caddy status and logs
+sudo systemctl status caddy
+sudo journalctl -u caddy -f
+
+# Reload Caddy config
+sudo systemctl reload caddy
 ```
 
 ## Sites
@@ -77,7 +89,7 @@ Then restart: `orbit restart`
 ## Config Locations
 
 - PHP: ~/.config/orbit/php/php.ini
-- Caddy: ~/.config/orbit/caddy/Caddyfile
+- Caddy: ~/.config/orbit/caddy/Caddyfile (host service, reload with `sudo systemctl reload caddy`)
 - Sites: ~/.config/orbit/config.json
 - DNS: ~/.config/orbit/dns/Dockerfile
 - Horizon: ~/.config/orbit/horizon/docker-compose.yml
@@ -92,6 +104,10 @@ orbit status --json | jq .
 # Check Horizon specifically
 orbit horizon:status
 docker logs orbit-horizon --tail 50
+
+# Check Caddy (runs on host, not Docker)
+sudo systemctl status caddy
+sudo journalctl -u caddy --tail 50
 
 # Restart everything
 orbit restart

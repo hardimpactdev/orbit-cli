@@ -36,11 +36,13 @@ Migrates from FrankenPHP Docker containers to PHP-FPM on the host machine.
 | 8 | Remove old containers |
 | 9 | Start services |
 
-## Containers Removed
+## Containers Removed (Legacy Docker Setup)
 
 - `orbit-php-82`, `orbit-php-83`, `orbit-php-84`, `orbit-php-85`
-- `orbit-caddy`
+- `orbit-caddy` (replaced by host Caddy via systemd)
 - `orbit-horizon`
+
+After migration, Caddy runs on the host as a systemd service (`caddy.service`).
 
 ## When to Use
 

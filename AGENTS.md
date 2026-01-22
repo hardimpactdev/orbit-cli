@@ -73,7 +73,7 @@ orbit upgrade                                  # Update local installation
 
 ```
 app/
-├── Actions/Provision/   # Site provisioning steps
+├── Actions/Install/     # Orbit installation steps
 ├── Commands/            # Artisan CLI commands
 ├── Concerns/            # Shared traits
 ├── Data/                # DTOs and value objects
@@ -84,15 +84,35 @@ app/
     └── Platform/        # OS-specific adapters
 ```
 
+**Note:** Site provisioning has been moved to `orbit-core`. The CLI now dispatches `CreateSiteJob` to Horizon for site creation.
+
 ### Key Patterns
 
 | Pattern | Location | Purpose |
 |---------|----------|---------|
 | Commands | `app/Commands/` | User-facing CLI interface |
-| Actions | `app/Actions/` | Single-responsibility tasks |
+| Actions | `app/Actions/Install/` | Orbit installation steps |
 | Services | `app/Services/` | Shared business logic |
 | Platform Adapters | `app/Services/Platform/` | Cross-platform abstraction |
 | DTOs | `app/Data/` | Type-safe data containers |
+
+### Site Provisioning Architecture
+
+Site provisioning logic lives in `orbit-core` (not this CLI). When `site:create` is called:
+
+```
+CLI site:create command
+    ↓
+Creates Site record in database (status: queued)
+    ↓
+Dispatches CreateSiteJob to Horizon
+    ↓
+orbit-core ProvisionPipeline runs
+    ↓
+Native Laravel Events → Reverb (broadcasting)
+```
+
+The CLI can optionally wait for completion with `--wait` flag (polls database).
 
 ## Code Style Guidelines
 
@@ -189,6 +209,18 @@ Path repositories in `composer.json` break CI/CD:
 4. Commit both files
 
 ## Host Services
+
+**IMPORTANT:** Caddy runs on the host via systemd, NOT in Docker.
+
+### Caddy Web Server (Linux)
+
+```bash
+sudo systemctl status caddy
+sudo systemctl reload caddy      # Reload config after changes
+sudo journalctl -u caddy -f      # View logs
+```
+
+Config location: `~/.config/orbit/caddy/Caddyfile` (imported by `/etc/caddy/Caddyfile`)
 
 ### Horizon Queue Worker (Linux)
 
