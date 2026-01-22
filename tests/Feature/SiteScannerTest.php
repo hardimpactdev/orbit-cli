@@ -8,6 +8,8 @@ beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class);
     $this->databaseService = Mockery::mock(DatabaseService::class);
     $this->databaseService->shouldReceive('getPhpVersion')->andReturn(null)->byDefault();
+    $this->databaseService->shouldReceive('setSitePath')->byDefault();
+    $this->databaseService->shouldReceive('getAllSiteSlugs')->andReturn([])->byDefault();
 });
 
 it('scans directories and returns all projects', function () {
