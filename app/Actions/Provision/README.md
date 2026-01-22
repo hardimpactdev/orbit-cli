@@ -2,6 +2,10 @@
 
 Single-responsibility action classes for project provisioning.
 
+> **Note**: The `site:create` command now dispatches provisioning jobs via the orbit-core API.
+> Provisioning logic lives in `CreateSiteJob` in orbit-core, which uses its own `ProvisionPipeline`.
+> These CLI actions are used by other commands (e.g., `project:update`) and for internal operations.
+
 ## Quick Reference
 
 | Action | Purpose |

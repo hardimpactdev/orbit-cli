@@ -87,13 +87,11 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit worktrees` | List all git worktrees |
 | `orbit worktree:refresh` | Auto-detect and link new worktrees |
 | `orbit worktree:unlink <site> <wt>` | Remove worktree routing |
-| `orbit project:create <name>` | Create project with async provisioning |
+| `orbit site:create <name>` | Create site (dispatches job to Horizon via API) |
+| `orbit site:delete <slug>` | Delete site with cascade |
 | `orbit project:list` | List all projects in scan paths |
 | `orbit project:scan` | Scan for git repositories |
 | `orbit project:update [path]` | Update project (git pull + deps) |
-| `orbit project:delete <slug>` | Delete project with cascade |
-| `orbit provision <slug>` | Background provisioning (internal) |
-| `orbit provision:status <slug>` | Check provisioning status |
 | `orbit reverb:setup` | Setup Reverb WebSocket service |
 | `orbit mcp:start orbit` | Start MCP server for AI tool integration |
 
