@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a434f2bc6f4ea9901cf346a7452de264",
+    "content-hash": "9a9c6ead4732c86f4484bf2dd6d17b0d",
     "packages": [
         {
             "name": "brick/math",
@@ -1125,22 +1125,23 @@
         },
         {
             "name": "hardimpactdev/orbit-core",
-            "version": "0.0.4",
+            "version": "0.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hardimpactdev/orbit-core.git",
-                "reference": "6a849122c4ff4ff71684fb01cabdafbff7e0708a"
+                "reference": "c4f243132b249c2c391b35b2dfbfe4493d287ca9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/6a849122c4ff4ff71684fb01cabdafbff7e0708a",
-                "reference": "6a849122c4ff4ff71684fb01cabdafbff7e0708a",
+                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/c4f243132b249c2c391b35b2dfbfe4493d287ca9",
+                "reference": "c4f243132b249c2c391b35b2dfbfe4493d287ca9",
                 "shasum": ""
             },
             "require": {
                 "illuminate/contracts": "^11.0||^12.0",
                 "illuminate/support": "^11.0||^12.0",
                 "inertiajs/inertia-laravel": "^2.0",
+                "laravel/mcp": "^0.5.2",
                 "php": "^8.4",
                 "saloonphp/saloon": "^3.14"
             },
@@ -1185,7 +1186,7 @@
             ],
             "support": {
                 "issues": "https://github.com/hardimpactdev/orbit-core/issues",
-                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.4"
+                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.5"
             },
             "funding": [
                 {
@@ -1193,7 +1194,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-01-19T10:35:38+00:00"
+            "time": "2026-01-22T20:37:31+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
@@ -10078,9 +10079,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "hardimpactdev/orbit-core": 20
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
