@@ -1,7 +1,7 @@
 <?php
 
 $home = $_SERVER['HOME'] ?? getenv('HOME') ?: '/tmp';
-$dbPath = getenv('ORBIT_TEST_DB') ?: "{$home}/.config/orbit/database.sqlite";
+$dbPath = getenv('DB_DATABASE') ?: getenv('ORBIT_TEST_DB') ?: "{$home}/.config/orbit/database.sqlite";
 
 return [
 

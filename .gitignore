@@ -6,3 +6,4 @@
 orbit-cli/
 .box_dump/
 /var/
+.env

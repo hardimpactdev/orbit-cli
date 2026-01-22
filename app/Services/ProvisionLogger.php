@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
 use LaravelZero\Framework\Commands\Command;
 
-final class ProvisionLogger
+/**
+ * CLI implementation of ProvisionLoggerContract.
+ *
+ * Outputs to console and broadcasts to Reverb via Pusher SDK.
+ * Used for synchronous CLI site creation with real-time progress.
+ */
+final class ProvisionLogger implements ProvisionLoggerContract
 {
     private ?string $logFile = null;
 
@@ -14,6 +21,7 @@ final class ProvisionLogger
         private readonly ?ReverbBroadcaster $broadcaster = null,
         private readonly ?Command $command = null,
         private readonly ?string $slug = null,
+        private readonly ?int $siteId = null,
     ) {
         if ($this->slug) {
             $this->initializeLogFile();
@@ -70,6 +78,9 @@ final class ProvisionLogger
         $errorSuffix = $error ? " - Error: {$error}" : '';
         $this->log("Status: {$status}{$errorSuffix}");
 
+        // Also output status to console
+        $this->command?->info("→ {$status}");
+
         if (! $this->broadcaster?->isEnabled() || ! $this->slug) {
             return;
         }
@@ -78,6 +89,10 @@ final class ProvisionLogger
             'slug' => $this->slug,
             'status' => $status,
         ];
+
+        if ($this->siteId) {
+            $data['site_id'] = $this->siteId;
+        }
 
         if ($error) {
             $data['error'] = $error;
@@ -96,5 +111,15 @@ final class ProvisionLogger
             'site.provision.status',
             $data
         );
+    }
+
+    public function getSlug(): string
+    {
+        return $this->slug ?? '';
+    }
+
+    public function getSiteId(): ?int
+    {
+        return $this->siteId;
     }
 }
