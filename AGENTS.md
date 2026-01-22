@@ -218,9 +218,12 @@ Path repositories in `composer.json` break CI/CD:
 sudo systemctl status caddy
 sudo systemctl reload caddy      # Reload config after changes
 sudo journalctl -u caddy -f      # View logs
+orbit caddy:reload               # Regenerate Caddyfile AND reload Caddy
 ```
 
 Config location: `~/.config/orbit/caddy/Caddyfile` (imported by `/etc/caddy/Caddyfile`)
+
+**Note:** The `caddy:reload` command is the preferred way to update Caddy config after adding new sites. It regenerates the Caddyfile from all detected sites and reloads Caddy in one step. This is called automatically by `CreateSiteJob` during site provisioning.
 
 ### Horizon Queue Worker (Linux)
 

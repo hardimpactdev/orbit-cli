@@ -80,6 +80,7 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit php <site> <version>` | Set PHP version for a site (8.3, 8.4, 8.5) |
 | `orbit logs` | Tail container logs |
 | `orbit trust` | Install Caddy root CA for local HTTPS |
+| `orbit caddy:reload` | Regenerate Caddyfile and reload Caddy |
 | `orbit upgrade` | Upgrade to the latest version |
 | `orbit rebuild` | Rebuild PHP images with Redis and other extensions |
 | `orbit upgrade --check` | Check for available updates |

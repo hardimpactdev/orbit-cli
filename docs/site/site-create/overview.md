@@ -21,7 +21,6 @@ Creates and provisions a new site with one of four explicit flows: composer crea
 - For clone flow: clones the repository, keeping origin pointing to source (contributor workflow).
 - For fork flow: forks the repo to your account, then clones your fork.
 - For template flow: creates new repo from GitHub template, then clones.
-- Reloads Caddy early so the site domain is reachable while setup continues.
 - Runs project setup via ProvisionPipeline:
   1. Install composer dependencies
   2. Detect Node package manager (bun or npm based on lock file)
@@ -33,7 +32,8 @@ Creates and provisions a new site with one of four explicit flows: composer crea
   8. Run migrations
   9. Configure trusted proxies
   10. Set PHP version
-- Restarts the PHP container, broadcasts ready status, and returns JSON success.
+  11. Regenerate Caddyfile and reload Caddy (via `caddy:reload`)
+- Broadcasts ready status and returns JSON success.
 
 ## Failure and recovery paths
 
@@ -55,5 +55,4 @@ Creates and provisions a new site with one of four explicit flows: composer crea
 
 - Packagist for package validation (create-project flow)
 - GitHub (gh cli) for repo fork/template and cloning
-- Docker PHP container restart
-- Caddy config generation and reload
+- Caddy config generation and reload via `orbit caddy:reload` (regenerates Caddyfile, reloads Caddy)
