@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
 use LaravelZero\Framework\Commands\Command;
 
-final class DeletionLogger
+/**
+ * Logger for site deletion operations in the CLI.
+ *
+ * Handles logging to files and broadcasting status updates
+ * via Pusher SDK to Reverb WebSocket + console output.
+ */
+final class DeletionLogger implements ProvisionLoggerContract
 {
     private ?string $logFile = null;
 
@@ -14,6 +21,7 @@ final class DeletionLogger
         private readonly ?ReverbBroadcaster $broadcaster = null,
         private readonly ?Command $command = null,
         private readonly ?string $slug = null,
+        private readonly ?int $siteId = null,
     ) {
         if ($this->slug) {
             $this->initializeLogFile();
@@ -97,6 +105,21 @@ final class DeletionLogger
             'site.deletion.status',
             $data
         );
+    }
 
+    /**
+     * Get the slug for this logger instance.
+     */
+    public function getSlug(): string
+    {
+        return $this->slug ?? '';
+    }
+
+    /**
+     * Get the site ID for this logger instance.
+     */
+    public function getSiteId(): ?int
+    {
+        return $this->siteId;
     }
 }

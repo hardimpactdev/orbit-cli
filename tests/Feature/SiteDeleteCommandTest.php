@@ -2,7 +2,13 @@
 
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
+use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
+use HardImpact\Orbit\Data\DeletionContext;
+use HardImpact\Orbit\Data\StepResult;
+use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class)->makePartial();
@@ -20,9 +26,44 @@ beforeEach(function () {
     $this->caddyfileGenerator->shouldReceive('reload')->andReturn(true);
     $this->app->instance(CaddyfileGenerator::class, $this->caddyfileGenerator);
 
+    // Mock the DeletionPipeline to always succeed
+    $this->deletionPipeline = Mockery::mock(DeletionPipeline::class);
+    $this->deletionPipeline->shouldReceive('run')
+        ->withArgs(fn ($context, $logger) => $context instanceof DeletionContext && $logger instanceof ProvisionLoggerContract)
+        ->andReturn(StepResult::success());
+    $this->app->instance(DeletionPipeline::class, $this->deletionPipeline);
+
     // Set HOME to temp for DeletionLogger
     $_SERVER['HOME'] = '/tmp';
     @mkdir('/tmp/.config/orbit/logs/deletion', 0755, true);
+
+    // Setup in-memory database for Site model
+    config(['database.default' => 'testing']);
+    config(['database.connections.testing' => [
+        'driver' => 'sqlite',
+        'database' => ':memory:',
+        'prefix' => '',
+    ]]);
+
+    // Create sites table
+    Schema::connection('testing')->create('sites', function ($table) {
+        $table->id();
+        $table->unsignedBigInteger('environment_id')->nullable();
+        $table->string('name');
+        $table->string('display_name')->nullable();
+        $table->string('slug');
+        $table->string('path')->nullable();
+        $table->string('php_version')->nullable();
+        $table->string('github_repo')->nullable();
+        $table->string('site_type')->nullable();
+        $table->boolean('has_public_folder')->default(false);
+        $table->string('domain')->nullable();
+        $table->string('site_url')->nullable();
+        $table->string('status')->default('queued');
+        $table->text('error_message')->nullable();
+        $table->string('job_id')->nullable();
+        $table->timestamps();
+    });
 });
 
 afterEach(function () {

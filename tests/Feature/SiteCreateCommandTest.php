@@ -1,87 +1,23 @@
 <?php
 
 use App\Commands\SiteCreateCommand;
-use App\Services\ConfigManager;
-use Illuminate\Support\Facades\Http;
 
-beforeEach(function () {
-    $this->tempDir = sys_get_temp_dir().'/orbit-project-test-'.uniqid();
-    mkdir($this->tempDir, 0755, true);
-
-    $this->configManager = Mockery::mock(ConfigManager::class)->makePartial();
-    $this->configManager->shouldReceive('getPaths')->andReturn([$this->tempDir]);
-    $this->configManager->shouldReceive('getTld')->andReturn('test');
-    $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir.'/.config/orbit');
-    $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
-    $this->configManager->shouldReceive('get')->with('sequence.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
-    $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
-    $this->configManager->shouldReceive('get')->with('paths', ['~/projects'])->andReturn([$this->tempDir]);
-    $this->app->instance(ConfigManager::class, $this->configManager);
-
-    // Set HOME to temp for ProvisionLogger
-    $_SERVER['HOME'] = '/tmp';
-    @mkdir('/tmp/.config/orbit/logs/provision', 0755, true);
-});
-
-afterEach(function () {
-    \Illuminate\Support\Facades\File::deleteDirectory($this->tempDir);
-    @unlink('/tmp/.config/orbit/logs/provision/test-site.log');
-});
-
-describe('site:create command', function () {
-    it('runs site:create command with basic name', function () {
-        // Mock the API response
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'test-site',
-                'message' => 'Site creation queued',
-            ]),
-        ]);
-
-        $this->artisan('site:create', ['name' => 'test-site', '--json' => true])
-            ->assertExitCode(0);
-    });
-
-    it('rejects reserved name "orbit"', function () {
-        $this->artisan('site:create', ['name' => 'orbit', '--json' => true])
-            ->assertExitCode(1);
-    });
-
-    it('handles API errors gracefully', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => false,
-                'error' => 'Site already exists',
-            ], 422),
-        ]);
-
-        $this->artisan('site:create', ['name' => 'existing-site', '--json' => true])
-            ->assertExitCode(1);
-    });
-
-    it('handles network errors gracefully', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => fn () => throw new \Illuminate\Http\Client\ConnectionException('Connection refused'),
-        ]);
-
-        $this->artisan('site:create', ['name' => 'test-site', '--json' => true])
-            ->assertExitCode(1);
-    });
-});
-
+/**
+ * Tests for SiteCreateCommand.
+ *
+ * Note: Full integration tests for site:create require the database
+ * to be set up with migrations. These tests focus on option definitions,
+ * URL normalization, and site type detection which don't require the database.
+ */
 describe('option definitions', function () {
     /**
-     * CRITICAL: Verify all options that the API expects are defined.
-     * This ensures CLI options match the orbit-core API.
+     * Verify all expected options are defined.
      */
     it('has --organization option defined (not --org)', function () {
         $command = $this->app->make(SiteCreateCommand::class);
         $definition = $command->getDefinition();
 
-        // The API uses 'org' key, but CLI uses --organization for clarity
         expect($definition->hasOption('organization'))->toBeTrue();
-        // Verify we don't have a confusingly-named --org option
         expect($definition->hasOption('org'))->toBeFalse();
     });
 
@@ -89,19 +25,19 @@ describe('option definitions', function () {
         $command = $this->app->make(SiteCreateCommand::class);
         $definition = $command->getDefinition();
 
-        // Options supported by the CLI that map to API fields
+        // Options supported by the CLI
         $expectedOptions = [
             'template',
             'clone',
             'fork',
             'visibility',
-            'organization',  // Maps to 'org' in API
-            'php',           // Maps to 'php_version' in API
-            'db-driver',     // Maps to 'db_driver' in API
+            'organization',
+            'php',
+            'db-driver',
             'session-driver',
             'cache-driver',
             'queue-driver',
-            'wait',          // CLI-only: wait for provisioning completion
+            'directory',
             'json',
         ];
 
@@ -117,123 +53,21 @@ describe('option definitions', function () {
 
         expect($definition->getOption('visibility')->getDefault())->toBe('private');
         expect($definition->getOption('fork')->getDefault())->toBeFalse();
-        expect($definition->getOption('wait')->getDefault())->toBeFalse();
-    });
-});
-
-describe('API payload building', function () {
-    it('sends correct payload for basic site creation', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'my-site',
-            ]),
-        ]);
-
-        $this->artisan('site:create', ['name' => 'My Site', '--json' => true]);
-
-        Http::assertSent(function ($request) {
-            return $request->url() === 'https://orbit.test/api/sites'
-                && $request['name'] === 'My Site';
-        });
     });
 
-    it('sends clone URL as template with is_template=false', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'cloned-site',
-            ]),
-        ]);
+    it('no longer has --wait option (sync execution)', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $definition = $command->getDefinition();
 
-        $this->artisan('site:create', [
-            'name' => 'cloned-site',
-            '--clone' => 'user/repo',
-            '--json' => true,
-        ]);
-
-        Http::assertSent(function ($request) {
-            return $request['template'] === 'user/repo'
-                && $request['is_template'] === false;
-        });
+        // --wait is removed since command runs synchronously now
+        expect($definition->hasOption('wait'))->toBeFalse();
     });
 
-    it('sends template with is_template=true', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'from-template',
-            ]),
-        ]);
+    it('has --directory option for custom path', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $definition = $command->getDefinition();
 
-        $this->artisan('site:create', [
-            'name' => 'from-template',
-            '--template' => 'owner/template-repo',
-            '--json' => true,
-        ]);
-
-        Http::assertSent(function ($request) {
-            return $request['template'] === 'owner/template-repo'
-                && $request['is_template'] === true;
-        });
-    });
-
-    it('normalizes git URLs to owner/repo format', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'test',
-            ]),
-        ]);
-
-        $this->artisan('site:create', [
-            'name' => 'test',
-            '--clone' => 'git@github.com:user/repo.git',
-            '--json' => true,
-        ]);
-
-        Http::assertSent(function ($request) {
-            return $request['template'] === 'user/repo';
-        });
-    });
-
-    it('maps organization option to org in payload', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'org-site',
-            ]),
-        ]);
-
-        $this->artisan('site:create', [
-            'name' => 'org-site',
-            '--organization' => 'my-org',
-            '--json' => true,
-        ]);
-
-        Http::assertSent(function ($request) {
-            return $request['org'] === 'my-org';
-        });
-    });
-
-    it('includes fork flag only when cloning', function () {
-        Http::fake([
-            'https://orbit.test/api/sites' => Http::response([
-                'success' => true,
-                'slug' => 'forked',
-            ]),
-        ]);
-
-        $this->artisan('site:create', [
-            'name' => 'forked',
-            '--clone' => 'other/repo',
-            '--fork' => true,
-            '--json' => true,
-        ]);
-
-        Http::assertSent(function ($request) {
-            return $request['fork'] === true;
-        });
+        expect($definition->hasOption('directory'))->toBeTrue();
     });
 });
 
@@ -262,5 +96,118 @@ describe('URL normalization', function () {
         $method = $reflection->getMethod('normalizeRepoUrl');
 
         expect($method->invoke($command, 'user/repo'))->toBe('user/repo');
+    });
+
+    it('handles null input', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('normalizeRepoUrl');
+
+        expect($method->invoke($command, null))->toBeNull();
+    });
+});
+
+describe('site type detection', function () {
+    beforeEach(function () {
+        $this->tempDir = sys_get_temp_dir().'/orbit-sitetype-test-'.uniqid();
+        mkdir($this->tempDir, 0755, true);
+    });
+
+    afterEach(function () {
+        \Illuminate\Support\Facades\File::deleteDirectory($this->tempDir);
+    });
+
+    it('detects laravel-app correctly', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Create test project with public folder and artisan
+        $projectDir = $this->tempDir.'/laravel-app';
+        mkdir("{$projectDir}/public", 0755, true);
+        touch("{$projectDir}/artisan");
+
+        expect($method->invoke($command, $projectDir))->toBe('laravel-app');
+    });
+
+    it('detects cli app correctly', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Create test CLI project
+        $projectDir = $this->tempDir.'/cli-app';
+        mkdir($projectDir, 0755, true);
+        touch("{$projectDir}/artisan");
+        file_put_contents("{$projectDir}/composer.json", json_encode([
+            'require' => ['laravel-zero/framework' => '^12.0'],
+        ]));
+
+        expect($method->invoke($command, $projectDir))->toBe('cli');
+    });
+
+    it('detects laravel-package correctly', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Create test package
+        $projectDir = $this->tempDir.'/package';
+        mkdir($projectDir, 0755, true);
+        file_put_contents("{$projectDir}/composer.json", json_encode([
+            'type' => 'laravel-package',
+        ]));
+
+        expect($method->invoke($command, $projectDir))->toBe('laravel-package');
+    });
+
+    it('detects package by laravel extra config', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Create test package with laravel providers
+        $projectDir = $this->tempDir.'/package-providers';
+        mkdir($projectDir, 0755, true);
+        file_put_contents("{$projectDir}/composer.json", json_encode([
+            'extra' => [
+                'laravel' => [
+                    'providers' => ['Some\\Provider'],
+                ],
+            ],
+        ]));
+
+        expect($method->invoke($command, $projectDir))->toBe('laravel-package');
+    });
+
+    it('detects web project without artisan', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Create simple web project
+        $projectDir = $this->tempDir.'/web';
+        mkdir("{$projectDir}/public", 0755, true);
+
+        expect($method->invoke($command, $projectDir))->toBe('web');
+    });
+
+    it('returns unknown for empty directory', function () {
+        $command = $this->app->make(SiteCreateCommand::class);
+        $reflection = new ReflectionClass($command);
+        $method = $reflection->getMethod('detectSiteType');
+
+        // Empty project
+        $projectDir = $this->tempDir.'/empty';
+        mkdir($projectDir, 0755, true);
+
+        expect($method->invoke($command, $projectDir))->toBe('unknown');
+    });
+});
+
+describe('reserved names', function () {
+    it('rejects reserved name "orbit"', function () {
+        $this->artisan('site:create', ['name' => 'orbit', '--json' => true])
+            ->assertExitCode(1);
     });
 });

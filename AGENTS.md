@@ -65,6 +65,23 @@ orbit upgrade                                  # Update local installation
 | PHP Runtime | PHP-FPM (8.3, 8.4, 8.5) |
 | Platforms | Linux, macOS |
 
+## Database Configuration
+
+Development and production use **separate databases** to avoid conflicts:
+
+| Instance | Database | Config |
+|----------|----------|--------|
+| Dev CLI (`~/projects/orbit-cli`) | `database-dev.sqlite` | `.env` file |
+| Installed CLI (`~/.local/bin/orbit`) | `database.sqlite` | Default |
+
+**Configuration:**
+- `config/database.php` reads `DB_DATABASE` env var (falls back to `~/.config/orbit/database.sqlite`)
+- Dev CLI uses `.env` with `DB_DATABASE=/home/nckrtl/.config/orbit/database-dev.sqlite`
+- `.env` is gitignored (create locally for development)
+
+**Why separate databases?**
+Sites created via dev CLI won't appear in production, and vice versa. This prevents confusion during development.
+
 ## Project Architecture
 
 **Orbit CLI** - Local PHP dev environment powered by Docker.
@@ -96,7 +113,8 @@ app/
 | Platform Adapters | `app/Services/Platform/` | Cross-platform abstraction |
 | DTOs | `app/Data/` | Type-safe data containers |
 | ReverbBroadcaster | `app/Services/` | WebSocket broadcasting to Reverb |
-| ProvisionLogger | `app/Services/` | CLI's implementation of `ProvisionLoggerContract` |
+| ProvisionLogger | `app/Services/` | CLI's provisioning logger (implements `ProvisionLoggerContract`) |
+| DeletionLogger | `app/Services/` | CLI's deletion logger (implements `ProvisionLoggerContract`) |
 
 ### Site Provisioning Architecture
 
@@ -118,6 +136,32 @@ The CLI provides its own `ProvisionLogger` implementation that:
 1. Outputs to console for real-time feedback
 2. Broadcasts to Reverb via Pusher SDK for web UI updates
 3. Implements `ProvisionLoggerContract` interface from orbit-core
+
+### Site Deletion Architecture
+
+Site deletion uses `orbit-core`'s `DeletionPipeline` (also synchronously):
+
+```
+CLI site:delete command
+    ↓
+Finds Site record in database (if exists)
+    ↓
+Runs DeletionPipeline synchronously (real-time console output)
+    ↓
+DeletionLogger broadcasts to Reverb → Web UI updates
+    ↓
+Site record deleted from database
+```
+
+The CLI provides its own `DeletionLogger` implementation that:
+1. Outputs to console for real-time feedback
+2. Broadcasts to Reverb via Pusher SDK for web UI updates
+3. Implements `ProvisionLoggerContract` interface from orbit-core
+
+**Key flags:**
+- `--force` - Skip confirmation prompt
+- `--keep-db` - Don't drop the PostgreSQL database
+- `--delete-repo` - Delete GitHub repository (passed to Sequence MCP)
 
 ## Code Style Guidelines
 

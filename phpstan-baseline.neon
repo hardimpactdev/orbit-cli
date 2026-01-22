@@ -17,21 +17,3 @@ parameters:
 			identifier: booleanNot.alwaysTrue
 			count: 1
 			path: app/Commands/MigrateToFpmCommand.php
-
-		-
-			message: '#^Call to method trigger\(\) on an unknown class Pusher\\Pusher\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ReverbBroadcaster.php
-
-		-
-			message: '#^Instantiated class Pusher\\Pusher not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ReverbBroadcaster.php
-
-		-
-			message: '#^Property App\\Services\\ReverbBroadcaster\:\:\$pusher has unknown class Pusher\\Pusher as its type\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/ReverbBroadcaster.php

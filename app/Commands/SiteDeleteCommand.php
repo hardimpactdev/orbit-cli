@@ -6,14 +6,30 @@ namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
-use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\DeletionLogger;
 use App\Services\McpClient;
 use App\Services\ReverbBroadcaster;
-use Illuminate\Support\Facades\Process;
+use HardImpact\Orbit\Data\DeletionContext;
+use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
 use LaravelZero\Framework\Commands\Command;
 
+/**
+ * CLI command for deleting sites.
+ *
+ * This command runs the DeletionPipeline synchronously, giving real-time
+ * console output while broadcasting updates to Reverb for web UI updates.
+ *
+ * Handles cleanup of:
+ * - PostgreSQL database
+ * - Project files
+ * - Caddy configuration
+ * - Site record in database
+ * - Optional: Sequence integration cleanup
+ *
+ * @see \HardImpact\Orbit\Services\Deletion\DeletionPipeline
+ */
 final class SiteDeleteCommand extends Command
 {
     use WithJsonOutput;
@@ -33,9 +49,9 @@ final class SiteDeleteCommand extends Command
 
     public function handle(
         ConfigManager $config,
-        CaddyfileGenerator $caddy,
         McpClient $mcp,
         ReverbBroadcaster $broadcaster,
+        DeletionPipeline $pipeline,
     ): int {
         /** @var string|null $slug */
         $slug = $this->argument('slug') ?? $this->option('slug');
@@ -53,11 +69,21 @@ final class SiteDeleteCommand extends Command
             return $this->failWithMessage('Site slug or --id is required');
         }
 
+        // Try to find the site in our database
+        $site = $this->findSite($slug, $id);
+        $siteId = $site?->id;
+
+        // If we have a site record, use its slug
+        if ($site) {
+            $slug = $site->slug;
+        }
+
         // Initialize logger with broadcaster for status updates
         $this->logger = new DeletionLogger(
             broadcaster: $broadcaster,
             command: $this->wantsJson() ? null : $this,
             slug: $slug,
+            siteId: $siteId,
         );
 
         // Broadcast initial deleting status
@@ -80,7 +106,7 @@ final class SiteDeleteCommand extends Command
         $meta = [];
         $warnings = [];
 
-        // Try to delete from sequence if configured (non-fatal if fails)
+        // Try to delete from Sequence if configured (non-fatal if fails)
         if ($mcp->isConfigured()) {
             $this->logger->broadcast('removing_sequence');
             try {
@@ -92,6 +118,11 @@ final class SiteDeleteCommand extends Command
                 ]);
                 $meta = $result['meta'] ?? [];
                 $this->logger->info('Deleted from sequence');
+
+                // Use Sequence's slug if we didn't have one
+                if (! $slug && isset($meta['slug'])) {
+                    $slug = $meta['slug'];
+                }
             } catch (\Throwable $e) {
                 $errorMsg = $e->getMessage();
                 // Truncate HTML error responses
@@ -105,53 +136,34 @@ final class SiteDeleteCommand extends Command
             $this->logger->warn('Sequence not configured - skipping integration cleanup');
         }
 
-        // Find local site directory
-        $localPath = $this->findLocalPath($config, $slug ?? $meta['slug'] ?? null);
+        // Build deletion context
+        $context = $this->buildDeletionContext($site, $slug, $config);
 
-        // Drop database (unless --keep-db)
-        if (! $this->option('keep-db')) {
-            $dbResult = $this->dropDatabase($slug ?? $meta['slug'] ?? null, $localPath);
-            $meta['database'] = $dbResult;
+        // Run the deletion pipeline
+        $result = $pipeline->run($context, $this->logger);
 
-            if ($dbResult['success'] && ! empty($dbResult['database'])) {
-                $this->logger->info("Database '{$dbResult['database']}' dropped");
-            }
+        if ($result->isFailed()) {
+            $this->logger->broadcast('delete_failed', $result->error);
+
+            return $this->failWithMessage($result->error ?? 'Deletion failed');
         }
 
-        // Broadcast removing files status before directory deletion
-        $this->logger->broadcast('removing_files');
-
-        // Remove local site directory if it exists
-        if ($localPath && is_dir($localPath)) {
-            $shouldDelete = $force || ! $this->input->isInteractive();
-            if (! $shouldDelete && $this->input->isInteractive()) {
-                $shouldDelete = $this->confirm("Delete local directory {$localPath}?", true);
-            }
-
-            if ($shouldDelete) {
-                $rmResult = Process::run('rm -rf '.escapeshellarg($localPath));
-                if (! $rmResult->successful()) {
-                    // Fallback to sudo if permission denied (e.g., files created by PHP container)
-                    Process::run('sudo rm -rf '.escapeshellarg($localPath));
-                }
-                $meta['local_deleted'] = true;
-                $this->logger->info("Local directory deleted: {$localPath}");
-            }
-        } elseif ($localPath === null && $slug) {
-            $this->logger->warn("Local directory not found for: {$slug}");
+        // Delete Site record from database (if exists)
+        if ($site) {
+            $site->delete();
+            $this->logger->info('Site record deleted from database');
         }
 
-        // Broadcast successful deletion BEFORE Caddy reload
-        // (Caddy reload drops WebSocket connections, so broadcast first)
+        // Broadcast successful deletion
         $this->logger->broadcast('deleted');
-
-        // Regenerate Caddy config
-        $caddy->generate();
-        $caddy->reload();
 
         $response = [
             'message' => 'Site deleted successfully',
-            'deleted' => $meta,
+            'slug' => $slug,
+            'deleted' => array_merge($meta, [
+                'database' => ! $this->option('keep-db'),
+                'files' => true,
+            ]),
         ];
 
         if ($warnings !== []) {
@@ -159,6 +171,49 @@ final class SiteDeleteCommand extends Command
         }
 
         return $this->outputJsonSuccess($response);
+    }
+
+    /**
+     * Find site by slug or ID.
+     */
+    private function findSite(?string $slug, ?string $id): ?Site
+    {
+        if ($id) {
+            return Site::find((int) $id);
+        }
+
+        if ($slug) {
+            return Site::where('slug', $slug)->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Build deletion context from site or manual lookup.
+     */
+    private function buildDeletionContext(?Site $site, ?string $slug, ConfigManager $config): DeletionContext
+    {
+        if ($site) {
+            return DeletionContext::fromSite($site, (bool) $this->option('keep-db'))
+                ->withDatabaseFromEnv();
+        }
+
+        // Fallback: build context manually from path lookup
+        $projectPath = $this->findLocalPath($config, $slug);
+
+        $context = new DeletionContext(
+            slug: $slug ?? 'unknown',
+            projectPath: $projectPath ?? '',
+            siteId: null,
+            keepDatabase: (bool) $this->option('keep-db'),
+            keepRepository: true,
+            dbConnection: null,
+            dbName: null,
+            tld: $config->getTld(),
+        );
+
+        return $context->withDatabaseFromEnv();
     }
 
     private function getSlugFromId(McpClient $mcp, int $id): string
@@ -174,7 +229,7 @@ final class SiteDeleteCommand extends Command
             return null;
         }
 
-        $paths = $config->get('paths', []);
+        $paths = $config->getPaths();
         foreach ($paths as $basePath) {
             $expandedPath = $this->expandPath($basePath);
             $sitePath = "{$expandedPath}/{$slug}";
@@ -184,68 +239,6 @@ final class SiteDeleteCommand extends Command
         }
 
         return null;
-    }
-
-    private function dropDatabase(?string $slug, ?string $localPath): array
-    {
-        $dbConnection = null;
-        $database = null;
-
-        if ($localPath && file_exists("{$localPath}/.env")) {
-            $envContent = file_get_contents("{$localPath}/.env");
-
-            if (preg_match('/^DB_CONNECTION=(.+)$/m', $envContent, $matches)) {
-                $dbConnection = trim($matches[1]);
-            }
-
-            if (preg_match('/^DB_DATABASE=(.+)$/m', $envContent, $matches)) {
-                $database = trim($matches[1]);
-            }
-        }
-
-        $postgresConnections = ['pgsql', 'postgres', 'postgresql'];
-        if ($dbConnection && ! in_array(strtolower($dbConnection), $postgresConnections, true)) {
-            return [
-                'success' => true,
-                'message' => "Site uses {$dbConnection}, not PostgreSQL - skipping database drop",
-                'skipped' => true,
-            ];
-        }
-
-        if (! $database && $slug) {
-            $database = $slug;
-        }
-
-        if (! $database) {
-            return ['success' => true, 'message' => 'No database to drop'];
-        }
-
-        $containerCheck = Process::run("docker ps --filter name=orbit-postgres --format '{{.Names}}' 2>&1");
-        if (! str_contains($containerCheck->output(), 'orbit-postgres')) {
-            return ['success' => true, 'message' => 'PostgreSQL container not running'];
-        }
-
-        $checkResult = Process::run(
-            "docker exec orbit-postgres psql -U orbit -tAc \"SELECT 1 FROM pg_database WHERE datname='{$database}'\" 2>&1"
-        );
-
-        if (! str_contains($checkResult->output(), '1')) {
-            return ['success' => true, 'message' => 'Database does not exist', 'database' => $database];
-        }
-
-        Process::run(
-            "docker exec orbit-postgres psql -U orbit -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{$database}' AND pid <> pg_backend_pid();\" 2>&1"
-        );
-
-        $result = Process::run(
-            "docker exec orbit-postgres psql -U orbit -c \"DROP DATABASE IF EXISTS \\\"{$database}\\\";\" 2>&1"
-        );
-
-        if ($result->successful()) {
-            return ['success' => true, 'message' => 'Database dropped', 'database' => $database];
-        }
-
-        return ['success' => false, 'error' => $result->output(), 'database' => $database];
     }
 
     private function expandPath(string $path): string
