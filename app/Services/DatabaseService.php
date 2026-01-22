@@ -32,6 +32,47 @@ class DatabaseService
         }
     }
 
+    public function setSitePath(string $slug, string $path): void
+    {
+        try {
+            Site::updateOrCreate(
+                ['slug' => $slug],
+                ['path' => $path]
+            );
+        } catch (\Exception) {
+            // Silently fail if database not available
+        }
+    }
+
+    public function getSitePath(string $slug): ?string
+    {
+        try {
+            $site = Site::where('slug', $slug)->first();
+
+            return $site?->getAttribute('path');
+        } catch (\Exception) {
+            return null;
+        }
+    }
+
+    public function getAllSiteSlugs(): array
+    {
+        try {
+            return Site::pluck('slug')->toArray();
+        } catch (\Exception) {
+            return [];
+        }
+    }
+
+    public function deleteSite(string $slug): void
+    {
+        try {
+            Site::where('slug', $slug)->delete();
+        } catch (\Exception) {
+            // Silently fail if database not available
+        }
+    }
+
     public function removeSiteOverride(string $slug): void
     {
         try {

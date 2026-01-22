@@ -11,15 +11,6 @@
             "email": "nick@shockmedia.nl"
         }
     ],
-    "repositories": [
-        {
-            "type": "path",
-            "url": "/home/nckrtl/projects/orbit-core",
-            "options": {
-                "symlink": true
-            }
-        }
-    ],
     "require": {
         "php": "^8.4",
         "guzzlehttp/guzzle": "^7.10",
@@ -54,6 +45,15 @@
         "optimize-autoloader": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": [
+                "hardimpactdev/orbit-core",
+                "laravel/mcp",
+                "inertiajs/inertia-laravel"
+            ]
         }
     },
     "minimum-stability": "stable",
