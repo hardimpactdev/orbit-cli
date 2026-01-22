@@ -87,7 +87,7 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit worktrees` | List all git worktrees |
 | `orbit worktree:refresh` | Auto-detect and link new worktrees |
 | `orbit worktree:unlink <site> <wt>` | Remove worktree routing |
-| `orbit site:create <name>` | Create site (dispatches job to Horizon via API) |
+| `orbit site:create <name>` | Create site (runs synchronously with real-time output) |
 | `orbit site:delete <slug>` | Delete site with cascade |
 | `orbit project:list` | List all projects in scan paths |
 | `orbit project:scan` | Scan for git repositories |

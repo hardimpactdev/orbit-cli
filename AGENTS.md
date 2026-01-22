@@ -84,7 +84,7 @@ app/
     └── Platform/        # OS-specific adapters
 ```
 
-**Note:** Site provisioning has been moved to `orbit-core`. The CLI now dispatches `CreateSiteJob` to Horizon for site creation.
+**Note:** Site provisioning logic lives in `orbit-core`, but the CLI runs it synchronously with real-time output.
 
 ### Key Patterns
 
@@ -95,24 +95,29 @@ app/
 | Services | `app/Services/` | Shared business logic |
 | Platform Adapters | `app/Services/Platform/` | Cross-platform abstraction |
 | DTOs | `app/Data/` | Type-safe data containers |
+| ReverbBroadcaster | `app/Services/` | WebSocket broadcasting to Reverb |
+| ProvisionLogger | `app/Services/` | CLI's implementation of `ProvisionLoggerContract` |
 
 ### Site Provisioning Architecture
 
-Site provisioning logic lives in `orbit-core` (not this CLI). When `site:create` is called:
+Site provisioning uses `orbit-core`'s `ProvisionPipeline` but runs synchronously in the CLI for real-time output:
 
 ```
 CLI site:create command
     ↓
 Creates Site record in database (status: queued)
     ↓
-Dispatches CreateSiteJob to Horizon
+Runs ProvisionPipeline synchronously (real-time console output)
     ↓
-orbit-core ProvisionPipeline runs
+ProvisionLogger broadcasts to Reverb → Web UI updates
     ↓
-Native Laravel Events → Reverb (broadcasting)
+Site marked ready on completion
 ```
 
-The CLI can optionally wait for completion with `--wait` flag (polls database).
+The CLI provides its own `ProvisionLogger` implementation that:
+1. Outputs to console for real-time feedback
+2. Broadcasts to Reverb via Pusher SDK for web UI updates
+3. Implements `ProvisionLoggerContract` interface from orbit-core
 
 ## Code Style Guidelines
 
