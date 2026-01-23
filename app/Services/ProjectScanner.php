@@ -212,7 +212,7 @@ class ProjectScanner
             if (! isset($foundProjects[$slug])) {
                 // Only delete if it's a CLI-created project (no environment_id)
                 // and not currently being provisioned
-                $project = \HardImpact\Orbit\Models\Project::where('slug', $slug)->first();
+                $project = \HardImpact\Orbit\Core\Models\Project::where('slug', $slug)->first();
                 if ($project && $project->environment_id === null && $project->status === 'active') {
                     $this->databaseService->deleteSite($slug);
                 }

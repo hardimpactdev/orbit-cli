@@ -2,11 +2,10 @@
 
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
-use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
-use HardImpact\Orbit\Data\DeletionContext;
-use HardImpact\Orbit\Data\StepResult;
-use HardImpact\Orbit\Models\Project;
-use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
+use HardImpact\Orbit\Core\Data\DeletionContext;
+use HardImpact\Orbit\Core\Data\StepResult;
+use HardImpact\Orbit\Core\Models\Project;
+use HardImpact\Orbit\Core\Services\Deletion\DeletionPipeline;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
@@ -29,7 +28,7 @@ beforeEach(function () {
     // Mock the DeletionPipeline to always succeed
     $this->deletionPipeline = Mockery::mock(DeletionPipeline::class);
     $this->deletionPipeline->shouldReceive('run')
-        ->withArgs(fn ($context, $logger) => $context instanceof DeletionContext && $logger instanceof ProvisionLoggerContract)
+        ->withArgs(fn ($context, $logger) => $context instanceof DeletionContext)
         ->andReturn(StepResult::success());
     $this->app->instance(DeletionPipeline::class, $this->deletionPipeline);
 

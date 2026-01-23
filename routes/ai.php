@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use HardImpact\Orbit\Mcp\OrbitServer;
+use HardImpact\Orbit\Core\Mcp\OrbitServer;
 use Laravel\Mcp\Facades\Mcp;
 
 /*

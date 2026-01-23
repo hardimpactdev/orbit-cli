@@ -10,9 +10,9 @@ use App\Services\ConfigManager;
 use App\Services\DeletionLogger;
 use App\Services\McpClient;
 use App\Services\ReverbBroadcaster;
-use HardImpact\Orbit\Data\DeletionContext;
-use HardImpact\Orbit\Models\Project;
-use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
+use HardImpact\Orbit\Core\Data\DeletionContext;
+use HardImpact\Orbit\Core\Models\Project;
+use HardImpact\Orbit\Core\Services\Deletion\DeletionPipeline;
 use LaravelZero\Framework\Commands\Command;
 
 /**
@@ -28,7 +28,7 @@ use LaravelZero\Framework\Commands\Command;
  * - Project record in database
  * - Optional: Sequence integration cleanup
  *
- * @see \HardImpact\Orbit\Services\Deletion\DeletionPipeline
+ * @see \HardImpact\Orbit\Core\Services\Deletion\DeletionPipeline
  */
 final class ProjectDeleteCommand extends Command
 {

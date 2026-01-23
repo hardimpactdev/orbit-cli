@@ -14,7 +14,7 @@
     "require": {
         "php": "^8.4",
         "guzzlehttp/guzzle": "^7.10",
-        "hardimpactdev/orbit-core": "^0.0.9",
+        "hardimpactdev/orbit-core": "^0.1.0",
         "illuminate/http": "^12.45",
         "laravel-zero/framework": "^12.0.2",
         "laravel-zero/phar-updater": "^1.4",
@@ -56,7 +56,7 @@
             ]
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true,
     "bin": ["orbit"]
 }

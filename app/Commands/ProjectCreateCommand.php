@@ -9,11 +9,11 @@ use App\Enums\ExitCode;
 use App\Services\ConfigManager;
 use App\Services\ProvisionLogger;
 use App\Services\ReverbBroadcaster;
-use HardImpact\Orbit\Data\ProvisionContext;
-use HardImpact\Orbit\Enums\RepoIntent;
-use HardImpact\Orbit\Models\Environment;
-use HardImpact\Orbit\Models\Project;
-use HardImpact\Orbit\Services\Provision\ProvisionPipeline;
+use HardImpact\Orbit\Core\Data\ProvisionContext;
+use HardImpact\Orbit\Core\Enums\RepoIntent;
+use HardImpact\Orbit\Core\Models\Environment;
+use HardImpact\Orbit\Core\Models\Project;
+use HardImpact\Orbit\Core\Services\Provision\ProvisionPipeline;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
 
@@ -23,7 +23,7 @@ use LaravelZero\Framework\Commands\Command;
  * This command runs the ProvisionPipeline synchronously, giving real-time
  * console output while broadcasting updates to Reverb for web UI updates.
  *
- * @see \HardImpact\Orbit\Services\Provision\ProvisionPipeline
+ * @see \HardImpact\Orbit\Core\Services\Provision\ProvisionPipeline
  */
 final class ProjectCreateCommand extends Command
 {

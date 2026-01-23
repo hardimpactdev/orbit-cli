@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use HardImpact\Orbit\Models\Project;
+use HardImpact\Orbit\Core\Models\Project;
 
 class DatabaseService
 {

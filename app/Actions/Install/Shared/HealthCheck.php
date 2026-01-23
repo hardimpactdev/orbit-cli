@@ -11,7 +11,7 @@ use App\Services\DockerManager;
 use App\Services\Install\InstallLogger;
 use App\Services\PhpManager;
 use App\Services\ServiceManager;
-use HardImpact\Orbit\Models\Environment;
+use HardImpact\Orbit\Core\Models\Environment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 

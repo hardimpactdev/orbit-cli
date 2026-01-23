@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
+use HardImpact\Orbit\Core\Contracts\ProvisionLoggerContract;
 use LaravelZero\Framework\Commands\Command;
 
 /**

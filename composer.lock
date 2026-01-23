@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "181b3df202e7a2a9b6a7eb2f01b1f2f6",
+    "content-hash": "0972e8897b81338e6b4d49fe612e7158",
     "packages": [
         {
             "name": "brick/math",
@@ -1125,24 +1125,22 @@
         },
         {
             "name": "hardimpactdev/orbit-core",
-            "version": "0.0.9",
+            "version": "v0.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hardimpactdev/orbit-core.git",
-                "reference": "236c7f45df0f55d0fb61126b568125ab0ec21ccd"
+                "reference": "e5fa98354c9ecace2a3703d66c9fbc3e42caaa55"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/236c7f45df0f55d0fb61126b568125ab0ec21ccd",
-                "reference": "236c7f45df0f55d0fb61126b568125ab0ec21ccd",
+                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/e5fa98354c9ecace2a3703d66c9fbc3e42caaa55",
+                "reference": "e5fa98354c9ecace2a3703d66c9fbc3e42caaa55",
                 "shasum": ""
             },
             "require": {
                 "illuminate/contracts": "^11.0||^12.0",
                 "illuminate/support": "^11.0||^12.0",
-                "inertiajs/inertia-laravel": "^2.0",
-                "laravel/mcp": "^0.5.2",
-                "php": "^8.4",
+                "php": "^8.3",
                 "saloonphp/saloon": "^3.14"
             },
             "require-dev": {
@@ -1156,14 +1154,14 @@
             "extra": {
                 "laravel": {
                     "providers": [
-                        "HardImpact\\Orbit\\OrbitServiceProvider"
+                        "HardImpact\\Orbit\\Core\\CoreServiceProvider"
                     ]
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "HardImpact\\Orbit\\": "src/",
-                    "HardImpact\\Orbit\\Database\\Factories\\": "database/factories/"
+                    "HardImpact\\Orbit\\Core\\": "src/",
+                    "HardImpact\\Orbit\\Core\\Database\\Factories\\": "database/factories/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1186,7 +1184,7 @@
             ],
             "support": {
                 "issues": "https://github.com/hardimpactdev/orbit-core/issues",
-                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.9"
+                "source": "https://github.com/hardimpactdev/orbit-core/tree/v0.1.0"
             },
             "funding": [
                 {
@@ -1194,77 +1192,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-01-23T15:53:45+00:00"
-        },
-        {
-            "name": "inertiajs/inertia-laravel",
-            "version": "v2.0.19",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/inertiajs/inertia-laravel.git",
-                "reference": "732a991342a0f82653a935440e2f3b9be1eb6f6e"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/inertiajs/inertia-laravel/zipball/732a991342a0f82653a935440e2f3b9be1eb6f6e",
-                "reference": "732a991342a0f82653a935440e2f3b9be1eb6f6e",
-                "shasum": ""
-            },
-            "require": {
-                "ext-json": "*",
-                "laravel/framework": "^10.0|^11.0|^12.0",
-                "php": "^8.1.0",
-                "symfony/console": "^6.2|^7.0"
-            },
-            "require-dev": {
-                "guzzlehttp/guzzle": "^7.2",
-                "larastan/larastan": "^3.0",
-                "laravel/pint": "^1.16",
-                "mockery/mockery": "^1.3.3",
-                "orchestra/testbench": "^8.0|^9.2|^10.0",
-                "phpunit/phpunit": "^10.4|^11.5",
-                "roave/security-advisories": "dev-master"
-            },
-            "suggest": {
-                "ext-pcntl": "Recommended when running the Inertia SSR server via the `inertia:start-ssr` artisan command."
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Inertia\\ServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "files": [
-                    "./helpers.php"
-                ],
-                "psr-4": {
-                    "Inertia\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Jonathan Reinink",
-                    "email": "jonathan@reinink.ca",
-                    "homepage": "https://reinink.ca"
-                }
-            ],
-            "description": "The Laravel adapter for Inertia.js.",
-            "keywords": [
-                "inertia",
-                "laravel"
-            ],
-            "support": {
-                "issues": "https://github.com/inertiajs/inertia-laravel/issues",
-                "source": "https://github.com/inertiajs/inertia-laravel/tree/v2.0.19"
-            },
-            "time": "2026-01-13T15:29:20+00:00"
+            "time": "2026-01-23T21:48:05+00:00"
         },
         {
             "name": "jolicode/jolinotif",
@@ -10078,7 +10006,7 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
