@@ -188,6 +188,32 @@ final readonly class MyAction    // Immutable actions/DTOs
 - All code must work on **both Linux and macOS**
 - Use `PlatformAdapter` for OS-specific operations
 
+### Package Dependencies
+
+orbit-cli depends on **orbit-core** for shared business logic (Models, Services, Jobs, DTOs).
+
+**Note**: orbit-core was split from a monolithic package to resolve Laravel Zero PHAR build conflicts. It now contains only PHP business logic, no UI components.
+
+```php
+// Import models from orbit-core
+use HardImpact\Orbit\Core\Models\Project;
+use HardImpact\Orbit\Core\Models\Environment;
+
+// Import services
+use HardImpact\Orbit\Core\Services\Provision\ProvisionPipeline;
+use HardImpact\Orbit\Core\Services\Deletion\DeletionPipeline;
+
+// Import data objects
+use HardImpact\Orbit\Core\Data\ProvisionContext;
+use HardImpact\Orbit\Core\Data\DeletionContext;
+use HardImpact\Orbit\Core\Data\StepResult;
+
+// Import contracts
+use HardImpact\Orbit\Core\Contracts\ProvisionLoggerContract;
+```
+
+**Important**: Always use `HardImpact\Orbit\Core\` namespace, never `HardImpact\Orbit\`
+
 ## Web Dashboard Integration
 
 The CLI integrates with `orbit-web` (bundled dashboard):
