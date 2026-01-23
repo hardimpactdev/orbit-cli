@@ -145,12 +145,20 @@ class UpgradeCommand extends Command
             }
             flush();
 
-            // SIGKILL (9) terminates immediately - no destructors, no shutdown handlers
+            // Use pcntl_exec to replace this process with a simple exit command.
+            // This avoids the ugly "killed" message that shells display when a
+            // process is terminated by SIGKILL. The shell sees a clean exit instead.
+            if (function_exists('pcntl_exec')) {
+                // Replace this process entirely - no PHP shutdown handlers run
+                pcntl_exec('/bin/true');
+            }
+
+            // Fallback: SIGKILL terminates immediately but shells may report "killed"
             if (function_exists('posix_kill')) {
                 posix_kill(posix_getpid(), 9);
             }
 
-            // Fallback for systems without posix extension
+            // Final fallback for systems without posix extension
             exit(0);
         } finally {
             // This should not run if posix_kill worked, but just in case
