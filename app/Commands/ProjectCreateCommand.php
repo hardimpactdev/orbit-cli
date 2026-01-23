@@ -12,25 +12,25 @@ use App\Services\ReverbBroadcaster;
 use HardImpact\Orbit\Data\ProvisionContext;
 use HardImpact\Orbit\Enums\RepoIntent;
 use HardImpact\Orbit\Models\Environment;
-use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Models\Project;
 use HardImpact\Orbit\Services\Provision\ProvisionPipeline;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
 
 /**
- * CLI command for creating sites.
+ * CLI command for creating projects.
  *
  * This command runs the ProvisionPipeline synchronously, giving real-time
  * console output while broadcasting updates to Reverb for web UI updates.
  *
  * @see \HardImpact\Orbit\Services\Provision\ProvisionPipeline
  */
-final class SiteCreateCommand extends Command
+final class ProjectCreateCommand extends Command
 {
     use WithJsonOutput;
 
-    protected $signature = 'site:create
-        {name : Site name}
+    protected $signature = 'project:create
+        {name : Project name}
         {--clone= : Existing repo to clone (user/repo or git URL)}
         {--template= : Template repository (user/repo format)}
         {--visibility=private : Repository visibility (private/public)}
@@ -44,7 +44,7 @@ final class SiteCreateCommand extends Command
         {--directory= : Custom directory path for the project}
         {--json : Output as JSON (for programmatic use)}';
 
-    protected $description = 'Create a new site (runs provisioning synchronously with real-time output)';
+    protected $description = 'Create a new project (runs provisioning synchronously with real-time output)';
 
     private ?ProvisionLogger $logger = null;
 
@@ -68,9 +68,9 @@ final class SiteCreateCommand extends Command
             return $this->failWithMessage('No local environment found. Run "orbit init" first.');
         }
 
-        // Check if site already exists
-        if (Site::where('slug', $slug)->exists()) {
-            return $this->failWithMessage("Site '{$slug}' already exists.");
+        // Check if project already exists
+        if (Project::where('slug', $slug)->exists()) {
+            return $this->failWithMessage("Project '{$slug}' already exists.");
         }
 
         // Determine project path before creating record (path is NOT NULL)
@@ -79,15 +79,15 @@ final class SiteCreateCommand extends Command
         // Determine PHP version (default to 8.4)
         $phpVersion = $this->option('php') ?? '8.4';
 
-        // Create the site record
-        $site = Site::create([
+        // Create the project record
+        $project = Project::create([
             'environment_id' => $environment->id,
             'name' => $slug,
             'display_name' => $name,
             'slug' => $slug,
             'path' => $projectPath,
             'php_version' => $phpVersion,
-            'status' => Site::STATUS_QUEUED,
+            'status' => Project::STATUS_QUEUED,
         ]);
 
         // Initialize logger with broadcaster for Reverb updates
@@ -95,10 +95,10 @@ final class SiteCreateCommand extends Command
             broadcaster: $broadcaster,
             command: $this->option('json') ? null : $this,
             slug: $slug,
-            siteId: $site->id,
+            projectId: $project->id,
         );
 
-        $this->logger->info("Creating site: {$name}");
+        $this->logger->info("Creating project: {$name}");
         $this->logger->broadcast('provisioning');
 
         try {
@@ -110,7 +110,7 @@ final class SiteCreateCommand extends Command
             }
 
             // Build provision context
-            $context = $this->buildContext($slug, $projectPath, $site->id, $environment);
+            $context = $this->buildContext($slug, $projectPath, $project->id, $environment);
 
             // Build options array for RepoIntent
             $options = $this->buildOptions($name);
@@ -141,19 +141,19 @@ final class SiteCreateCommand extends Command
             // Phase 4: Finalize
             $this->logger->broadcast('finalizing');
 
-            // Detect site type and public folder
+            // Detect project type and public folder
             $hasPublicFolder = is_dir("{$projectPath}/public");
-            $siteType = $this->detectSiteType($projectPath);
+            $projectType = $this->detectProjectType($projectPath);
             $tld = $config->getTld();
 
-            // Update site with final details
-            $site->update([
-                'status' => Site::STATUS_READY,
+            // Update project with final details
+            $project->update([
+                'status' => Project::STATUS_READY,
                 'github_repo' => $context->githubRepo,
-                'site_url' => "https://{$slug}.{$tld}",
+                'url' => "https://{$slug}.{$tld}",
                 'domain' => "{$slug}.{$tld}",
                 'has_public_folder' => $hasPublicFolder,
-                'site_type' => $siteType,
+                'project_type' => $projectType,
                 'error_message' => null,
             ]);
 
@@ -165,20 +165,20 @@ final class SiteCreateCommand extends Command
                 $this->regenerateCaddy();
             }
 
-            $this->logger->info("Site {$slug} created successfully!");
+            $this->logger->info("Project {$slug} created successfully!");
 
             return $this->outputJsonSuccess([
                 'name' => $name,
                 'slug' => $slug,
-                'site_id' => $site->id,
+                'project_id' => $project->id,
                 'status' => 'ready',
-                'site_url' => "https://{$slug}.{$tld}",
+                'url' => "https://{$slug}.{$tld}",
                 'path' => $projectPath,
             ]);
 
         } catch (\Throwable $e) {
-            $site->update([
-                'status' => Site::STATUS_FAILED,
+            $project->update([
+                'status' => Project::STATUS_FAILED,
                 'error_message' => $e->getMessage(),
             ]);
 
@@ -199,7 +199,7 @@ final class SiteCreateCommand extends Command
     }
 
     /**
-     * Determine the project path for the site.
+     * Determine the project path.
      */
     private function determineProjectPath(ConfigManager $config, string $slug): string
     {
@@ -218,7 +218,7 @@ final class SiteCreateCommand extends Command
     /**
      * Build the provision context from command options.
      */
-    private function buildContext(string $slug, string $projectPath, int $siteId, Environment $environment): ProvisionContext
+    private function buildContext(string $slug, string $projectPath, int $projectId, Environment $environment): ProvisionContext
     {
         $tld = $environment->tld ?? 'ccc';
 
@@ -231,7 +231,7 @@ final class SiteCreateCommand extends Command
         return new ProvisionContext(
             slug: $slug,
             projectPath: $projectPath,
-            siteId: $siteId,
+            projectId: $projectId,
             cloneUrl: $cloneUrl,
             template: $this->option('template') ? $cloneUrl : null,
             visibility: $this->option('visibility') ?? 'private',
@@ -347,9 +347,9 @@ final class SiteCreateCommand extends Command
     }
 
     /**
-     * Detect the site type based on file structure.
+     * Detect the project type based on file structure.
      */
-    private function detectSiteType(string $directory): string
+    private function detectProjectType(string $directory): string
     {
         $hasPublicFolder = is_dir("{$directory}/public");
         $hasArtisan = file_exists("{$directory}/artisan");

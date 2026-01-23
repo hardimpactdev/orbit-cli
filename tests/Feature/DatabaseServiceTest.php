@@ -13,13 +13,12 @@ beforeEach(function () {
         'foreign_key_constraints' => true,
     ]]);
 
-    // Create the sites table
-    Schema::create('sites', function ($table) {
+    // Create the projects table
+    Schema::create('projects', function ($table) {
         $table->id();
         $table->string('slug')->unique();
         $table->string('path');
         $table->string('php_version')->nullable();
-        $table->foreignId('project_id')->nullable();
         $table->timestamps();
     });
 
@@ -27,7 +26,7 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    Schema::dropIfExists('sites');
+    Schema::dropIfExists('projects');
 });
 
 it('stores and retrieves site PHP version', function () {

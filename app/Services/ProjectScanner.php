@@ -4,7 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\File;
 
-class SiteScanner
+class ProjectScanner
 {
     public function __construct(
         protected ConfigManager $configManager,
@@ -13,19 +13,19 @@ class SiteScanner
 
     /**
      * Scan all directories in configured paths.
-     * Returns ALL directories as sites, with has_public_folder flag.
+     * Returns ALL directories as projects, with has_public_folder flag.
      */
     public function scan(): array
     {
-        $sites = [];
+        $projects = [];
         $paths = $this->configManager->getPaths();
         $tld = $this->configManager->getTld();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
-        $siteOverrides = $this->configManager->getSiteOverrides();
+        $projectOverrides = $this->configManager->getSiteOverrides(); // Config method still uses site naming
         $seenNames = [];
 
-        // First, process custom sites with explicit paths defined in config
-        foreach ($siteOverrides as $name => $override) {
+        // First, process custom projects with explicit paths defined in config
+        foreach ($projectOverrides as $name => $override) {
             if (isset($override['path'])) {
                 $customPath = $this->expandPath($override['path']);
 
@@ -34,31 +34,31 @@ class SiteScanner
                     $hasPublicFolder = File::isDirectory($customPath.'/public');
                     $phpVersion = $this->detectPhpVersion($customPath, $name, $defaultPhp);
 
-                    $site = [
+                    $project = [
                         'name' => $name,
                         'display_name' => $this->getDisplayName($customPath, $name),
                         'github_repo' => $this->getGitHubRepo($customPath),
-                        'site_type' => $this->getSiteType($customPath),
+                        'project_type' => $this->getProjectType($customPath),
                         'path' => $customPath,
                         'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
                         'has_custom_php' => $phpVersion !== $defaultPhp,
                     ];
 
-                    // Only add site info if has public folder
+                    // Only add URL info if has public folder
                     if ($hasPublicFolder) {
-                        $site['domain'] = "{$name}.{$tld}";
-                        $site['site_url'] = "https://{$name}.{$tld}";
-                        $site['secure'] = true;
+                        $project['domain'] = "{$name}.{$tld}";
+                        $project['url'] = "https://{$name}.{$tld}";
+                        $project['secure'] = true;
                     }
 
-                    $this->databaseService->setSitePath($name, $site['path']);
-                    $sites[] = $site;
+                    $this->databaseService->setSitePath($name, $project['path']); // DB method still uses site naming
+                    $projects[] = $project;
                 }
             }
         }
 
-        // Then scan configured paths for auto-discovered sites (ALL directories)
+        // Then scan configured paths for auto-discovered projects (ALL directories)
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
 
@@ -71,7 +71,7 @@ class SiteScanner
             foreach ($directories as $directory) {
                 $name = basename((string) $directory);
 
-                // Skip if we've already seen this name (custom sites take precedence)
+                // Skip if we've already seen this name (custom projects take precedence)
                 if (isset($seenNames[$name])) {
                     continue;
                 }
@@ -81,41 +81,41 @@ class SiteScanner
                 $hasPublicFolder = File::isDirectory($directory.'/public');
                 $phpVersion = $this->detectPhpVersion($directory, $name, $defaultPhp);
 
-                $site = [
+                $project = [
                     'name' => $name,
                     'display_name' => $this->getDisplayName($directory, $name),
                     'github_repo' => $this->getGitHubRepo($directory),
-                    'site_type' => $this->getSiteType($directory),
+                    'project_type' => $this->getProjectType($directory),
                     'path' => $directory,
                     'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
                     'has_custom_php' => $phpVersion !== $defaultPhp,
                 ];
 
-                // Only add site info if has public folder
+                // Only add URL info if has public folder
                 if ($hasPublicFolder) {
-                    $site['domain'] = "{$name}.{$tld}";
-                    $site['site_url'] = "https://{$name}.{$tld}";
-                    $site['secure'] = true;
+                    $project['domain'] = "{$name}.{$tld}";
+                    $project['url'] = "https://{$name}.{$tld}";
+                    $project['secure'] = true;
                 }
 
-                $this->databaseService->setSitePath($name, $site['path']);
-                $sites[] = $site;
+                $this->databaseService->setSitePath($name, $project['path']);
+                $projects[] = $project;
             }
         }
 
-        // Clean up orphan sites (in DB but not found on disk)
-        $this->cleanupOrphanSites($seenNames);
+        // Clean up orphan projects (in DB but not found on disk)
+        $this->cleanupOrphanProjects($seenNames);
 
-        usort($sites, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
+        usort($projects, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
-        return $sites;
+        return $projects;
     }
 
     /**
-     * Get only sites (sites with public folder) for Caddyfile generation.
+     * Get only projects with public folder for Caddyfile generation.
      */
-    public function scanSites(): array
+    public function scanProjects(): array
     {
         return array_filter($this->scan(), fn ($p) => $p['has_public_folder']);
     }
@@ -163,28 +163,23 @@ class SiteScanner
         return $path;
     }
 
-    public function findSite(string $name): ?array
+    public function findProject(string $name): ?array
     {
-        $sites = $this->scan();
+        $projects = $this->scan();
 
-        foreach ($sites as $site) {
-            if ($site['name'] === $name) {
-                return $site;
+        foreach ($projects as $project) {
+            if ($project['name'] === $name) {
+                return $project;
             }
         }
 
         return null;
     }
 
-    public function findProject(string $name): ?array
-    {
-        return $this->findSite($name);
-    }
-
     /**
-     * Find a site's path, using stored path if valid, otherwise rescanning.
+     * Find a project's path, using stored path if valid, otherwise rescanning.
      */
-    public function findSitePath(string $slug): ?string
+    public function findProjectPath(string $slug): ?string
     {
         // Check stored path first (fast path)
         $storedPath = $this->databaseService->getSitePath($slug);
@@ -195,29 +190,29 @@ class SiteScanner
 
         // Path missing or invalid - rescan to find new location
         // scan() will update the stored path if found
-        $site = $this->findSite($slug);
+        $project = $this->findProject($slug);
 
-        return $site['path'] ?? null;
+        return $project['path'] ?? null;
     }
 
     /**
-     * Clean up orphan sites (in DB but not found on disk).
+     * Clean up orphan projects (in DB but not found on disk).
      *
-     * @param  array<string, bool>  $foundSites
+     * @param  array<string, bool>  $foundProjects
      */
-    protected function cleanupOrphanSites(array $foundSites): void
+    protected function cleanupOrphanProjects(array $foundProjects): void
     {
         $dbSlugs = $this->databaseService->getAllSiteSlugs();
 
         foreach ($dbSlugs as $slug) {
-            if (! isset($foundSites[$slug])) {
+            if (! isset($foundProjects[$slug])) {
                 $this->databaseService->deleteSite($slug);
             }
         }
     }
 
     /**
-     * Get display name for a site from .env APP_NAME or generate from slug.
+     * Get display name for a project from .env APP_NAME or generate from slug.
      */
     protected function getDisplayName(string $directory, string $slug): string
     {
@@ -257,9 +252,9 @@ class SiteScanner
     }
 
     /**
-     * Detect the site type based on file structure.
+     * Detect the project type based on file structure.
      */
-    protected function getSiteType(string $directory): string
+    protected function getProjectType(string $directory): string
     {
         $hasPublicFolder = File::isDirectory($directory.'/public');
         $hasArtisan = File::exists($directory.'/artisan');

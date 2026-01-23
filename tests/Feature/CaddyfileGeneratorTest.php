@@ -2,7 +2,7 @@
 
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
-use App\Services\SiteScanner;
+use App\Services\ProjectScanner;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
@@ -11,7 +11,7 @@ beforeEach(function () {
     mkdir($this->tempDir.'/php', 0755, true);
 
     $this->configManager = Mockery::mock(ConfigManager::class);
-    $this->siteScanner = Mockery::mock(SiteScanner::class);
+    $this->projectScanner = Mockery::mock(ProjectScanner::class);
 
     $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir);
     $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
@@ -29,7 +29,7 @@ it('generates caddyfile with sites', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn(['~/Projects']);
 
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([
+    $this->projectScanner->shouldReceive('scanProjects')->andReturn([
         [
             'name' => 'mysite',
             'domain' => 'mysite.test',
@@ -46,7 +46,7 @@ it('generates caddyfile with sites', function () {
         ],
     ]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->siteScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
@@ -64,7 +64,7 @@ it('generates caddyfile with php_fastcgi directives', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn(['~/Projects']);
 
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([
+    $this->projectScanner->shouldReceive('scanProjects')->andReturn([
         [
             'name' => 'mysite',
             'domain' => 'mysite.test',
@@ -74,7 +74,7 @@ it('generates caddyfile with php_fastcgi directives', function () {
         ],
     ]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->siteScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
@@ -89,9 +89,9 @@ it('generates empty caddyfile when no sites exist', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn([]);
 
-    $this->siteScanner->shouldReceive('scanSites')->andReturn([]);
+    $this->projectScanner->shouldReceive('scanProjects')->andReturn([]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->siteScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');

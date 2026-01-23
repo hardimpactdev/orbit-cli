@@ -2,7 +2,7 @@
 
 use App\Services\ConfigManager;
 use App\Services\DatabaseService;
-use App\Services\SiteScanner;
+use App\Services\ProjectScanner;
 
 beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class);
@@ -24,7 +24,7 @@ it('scans directories and returns all projects', function () {
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $projects = $scanner->scan();
 
     expect($projects)->toHaveCount(3);
@@ -48,7 +48,7 @@ it('scans directories and returns all projects', function () {
     rmdir($tempDir);
 });
 
-it('scanSites returns only projects with public folder', function () {
+it('scanProjects returns only projects with public folder', function () {
     $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/project1/public', 0755, true);
     mkdir($tempDir.'/project2', 0755, true); // no public folder
@@ -59,11 +59,11 @@ it('scanSites returns only projects with public folder', function () {
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
-    $sites = $scanner->scanSites();
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
+    $projects = $scanner->scanProjects();
 
-    expect($sites)->toHaveCount(1);
-    expect($sites[0]['name'])->toBe('project1');
+    expect($projects)->toHaveCount(1);
+    expect($projects[0]['name'])->toBe('project1');
 
     // Cleanup
     rmdir($tempDir.'/project1/public');
@@ -84,7 +84,7 @@ it('respects php-version file', function () {
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
     $this->databaseService->shouldReceive('setSitePhpVersion')->with('myproject', Mockery::any(), '8.4')->once();
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $projects = $scanner->scan();
 
     expect($projects)->toHaveCount(1);
@@ -110,7 +110,7 @@ it('respects database php version override', function () {
 
     $this->databaseService->shouldReceive('getPhpVersion')->with('myproject')->andReturn('8.4');
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $projects = $scanner->scan();
 
     expect($projects)->toHaveCount(1);
@@ -133,7 +133,7 @@ it('finds a project by name', function () {
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
     $this->configManager->shouldReceive('getSitePhpVersion')->andReturn(null);
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $project = $scanner->findProject('myproject');
 
     expect($project)->not->toBeNull();
@@ -154,7 +154,7 @@ it('returns null for non-existent project', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $project = $scanner->findProject('nonexistent');
 
     expect($project)->toBeNull();
@@ -169,7 +169,7 @@ it('skips invalid directories', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getSiteOverrides')->andReturn([]);
 
-    $scanner = new SiteScanner($this->configManager, $this->databaseService);
+    $scanner = new ProjectScanner($this->configManager, $this->databaseService);
     $projects = $scanner->scan();
 
     expect($projects)->toBeEmpty();

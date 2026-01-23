@@ -1,20 +1,20 @@
 <?php
 
-use App\Commands\SiteCreateCommand;
+use App\Commands\ProjectCreateCommand;
 
 /**
- * Tests for SiteCreateCommand.
+ * Tests for ProjectCreateCommand.
  *
- * Note: Full integration tests for site:create require the database
+ * Note: Full integration tests for project:create require the database
  * to be set up with migrations. These tests focus on option definitions,
- * URL normalization, and site type detection which don't require the database.
+ * URL normalization, and project type detection which don't require the database.
  */
 describe('option definitions', function () {
     /**
      * Verify all expected options are defined.
      */
     it('has --organization option defined (not --org)', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $definition = $command->getDefinition();
 
         expect($definition->hasOption('organization'))->toBeTrue();
@@ -22,7 +22,7 @@ describe('option definitions', function () {
     });
 
     it('has all expected options', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $definition = $command->getDefinition();
 
         // Options supported by the CLI
@@ -48,7 +48,7 @@ describe('option definitions', function () {
     });
 
     it('has correct option defaults', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $definition = $command->getDefinition();
 
         expect($definition->getOption('visibility')->getDefault())->toBe('private');
@@ -56,7 +56,7 @@ describe('option definitions', function () {
     });
 
     it('no longer has --wait option (sync execution)', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $definition = $command->getDefinition();
 
         // --wait is removed since command runs synchronously now
@@ -64,7 +64,7 @@ describe('option definitions', function () {
     });
 
     it('has --directory option for custom path', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $definition = $command->getDefinition();
 
         expect($definition->hasOption('directory'))->toBeTrue();
@@ -73,7 +73,7 @@ describe('option definitions', function () {
 
 describe('URL normalization', function () {
     it('normalizes https github URLs', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('normalizeRepoUrl');
 
@@ -82,7 +82,7 @@ describe('URL normalization', function () {
     });
 
     it('normalizes ssh github URLs', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('normalizeRepoUrl');
 
@@ -91,7 +91,7 @@ describe('URL normalization', function () {
     });
 
     it('passes through owner/repo format unchanged', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('normalizeRepoUrl');
 
@@ -99,7 +99,7 @@ describe('URL normalization', function () {
     });
 
     it('handles null input', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
         $method = $reflection->getMethod('normalizeRepoUrl');
 
@@ -107,9 +107,9 @@ describe('URL normalization', function () {
     });
 });
 
-describe('site type detection', function () {
+describe('project type detection', function () {
     beforeEach(function () {
-        $this->tempDir = sys_get_temp_dir().'/orbit-sitetype-test-'.uniqid();
+        $this->tempDir = sys_get_temp_dir().'/orbit-projecttype-test-'.uniqid();
         mkdir($this->tempDir, 0755, true);
     });
 
@@ -118,9 +118,9 @@ describe('site type detection', function () {
     });
 
     it('detects laravel-app correctly', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Create test project with public folder and artisan
         $projectDir = $this->tempDir.'/laravel-app';
@@ -131,9 +131,9 @@ describe('site type detection', function () {
     });
 
     it('detects cli app correctly', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Create test CLI project
         $projectDir = $this->tempDir.'/cli-app';
@@ -147,9 +147,9 @@ describe('site type detection', function () {
     });
 
     it('detects laravel-package correctly', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Create test package
         $projectDir = $this->tempDir.'/package';
@@ -162,9 +162,9 @@ describe('site type detection', function () {
     });
 
     it('detects package by laravel extra config', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Create test package with laravel providers
         $projectDir = $this->tempDir.'/package-providers';
@@ -181,9 +181,9 @@ describe('site type detection', function () {
     });
 
     it('detects web project without artisan', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Create simple web project
         $projectDir = $this->tempDir.'/web';
@@ -193,9 +193,9 @@ describe('site type detection', function () {
     });
 
     it('returns unknown for empty directory', function () {
-        $command = $this->app->make(SiteCreateCommand::class);
+        $command = $this->app->make(ProjectCreateCommand::class);
         $reflection = new ReflectionClass($command);
-        $method = $reflection->getMethod('detectSiteType');
+        $method = $reflection->getMethod('detectProjectType');
 
         // Empty project
         $projectDir = $this->tempDir.'/empty';
@@ -207,7 +207,7 @@ describe('site type detection', function () {
 
 describe('reserved names', function () {
     it('rejects reserved name "orbit"', function () {
-        $this->artisan('site:create', ['name' => 'orbit', '--json' => true])
+        $this->artisan('project:create', ['name' => 'orbit', '--json' => true])
             ->assertExitCode(1);
     });
 });

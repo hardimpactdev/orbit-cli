@@ -4,22 +4,22 @@ use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\DatabaseService;
-use App\Services\SiteScanner;
+use App\Services\ProjectScanner;
 
 beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class);
-    $this->siteScanner = Mockery::mock(SiteScanner::class);
+    $this->projectScanner = Mockery::mock(ProjectScanner::class);
     $this->caddyfileGenerator = Mockery::mock(CaddyfileGenerator::class);
     $this->databaseService = Mockery::mock(DatabaseService::class);
 
     $this->app->instance(ConfigManager::class, $this->configManager);
-    $this->app->instance(SiteScanner::class, $this->siteScanner);
+    $this->app->instance(ProjectScanner::class, $this->projectScanner);
     $this->app->instance(CaddyfileGenerator::class, $this->caddyfileGenerator);
     $this->app->instance(DatabaseService::class, $this->databaseService);
 });
 
 it('sets php version for a site', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('mysite')->andReturn([
+    $this->projectScanner->shouldReceive('findProject')->with('mysite')->andReturn([
         'name' => 'mysite',
         'domain' => 'mysite.test',
         'path' => '/path/to/mysite',
@@ -37,7 +37,7 @@ it('sets php version for a site', function () {
 });
 
 it('resets php version to default', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('mysite')->andReturn([
+    $this->projectScanner->shouldReceive('findProject')->with('mysite')->andReturn([
         'name' => 'mysite',
         'domain' => 'mysite.test',
         'path' => '/path/to/mysite',
@@ -57,15 +57,15 @@ it('resets php version to default', function () {
 });
 
 it('fails when site not found', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('nonexistent')->andReturn(null);
+    $this->projectScanner->shouldReceive('findProject')->with('nonexistent')->andReturn(null);
 
     $this->artisan('php nonexistent 8.4')
-        ->expectsOutputToContain("Site 'nonexistent' not found")
+        ->expectsOutputToContain("Project 'nonexistent' not found")
         ->assertExitCode(ExitCode::InvalidArguments->value);
 });
 
 it('fails with invalid php version', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('mysite')->andReturn([
+    $this->projectScanner->shouldReceive('findProject')->with('mysite')->andReturn([
         'name' => 'mysite',
         'domain' => 'mysite.test',
         'path' => '/path/to/mysite',
@@ -80,7 +80,7 @@ it('fails with invalid php version', function () {
 });
 
 it('outputs json when --json flag is used', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('mysite')->andReturn([
+    $this->projectScanner->shouldReceive('findProject')->with('mysite')->andReturn([
         'name' => 'mysite',
         'domain' => 'mysite.test',
         'path' => '/path/to/mysite',
@@ -97,7 +97,7 @@ it('outputs json when --json flag is used', function () {
 });
 
 it('skips caddy reload for projects without public folder', function () {
-    $this->siteScanner->shouldReceive('findSite')->with('mypackage')->andReturn([
+    $this->projectScanner->shouldReceive('findProject')->with('mypackage')->andReturn([
         'name' => 'mypackage',
         'path' => '/path/to/mypackage',
         'php_version' => '8.3',

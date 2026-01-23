@@ -10,16 +10,16 @@ use App\Services\ConfigManager;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
-final class SiteScanCommand extends Command
+final class ProjectScanCommand extends Command
 {
     use WithJsonOutput;
 
-    protected $signature = 'site:scan
+    protected $signature = 'project:scan
         {path? : Specific path to scan (defaults to configured paths)}
         {--depth=2 : Maximum directory depth to scan}
         {--json : Output as JSON}';
 
-    protected $description = 'Scan for existing sites (git repositories) in configured paths';
+    protected $description = 'Scan for existing projects (git repositories) in configured paths';
 
     public function handle(ConfigManager $config): int
     {
@@ -42,7 +42,7 @@ final class SiteScanCommand extends Command
             return $this->failWithMessage('No paths configured to scan');
         }
 
-        $sites = [];
+        $projects = [];
 
         foreach ($pathsToScan as $basePath) {
             if (! is_dir($basePath)) {
@@ -50,29 +50,29 @@ final class SiteScanCommand extends Command
             }
 
             $found = $this->scanDirectory($basePath, $depth);
-            $sites = array_merge($sites, $found);
+            $projects = array_merge($projects, $found);
         }
 
         // Sort by name
-        usort($sites, fn ($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
+        usort($projects, fn ($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
 
         if ($this->wantsJson()) {
             $this->outputJsonSuccess([
-                'sites' => $sites,
-                'count' => count($sites),
+                'projects' => $projects,
+                'count' => count($projects),
             ]);
         } else {
-            if (empty($sites)) {
-                $this->info('No sites found.');
+            if (empty($projects)) {
+                $this->info('No projects found.');
             } else {
-                $this->info('Found '.count($sites).' site(s):');
+                $this->info('Found '.count($projects).' project(s):');
                 $this->newLine();
 
-                foreach ($sites as $site) {
-                    $this->line("  <info>{$site['name']}</info>");
-                    $this->line("    Path: {$site['path']}");
-                    if ($site['github_url']) {
-                        $this->line("    GitHub: {$site['github_url']}");
+                foreach ($projects as $project) {
+                    $this->line("  <info>{$project['name']}</info>");
+                    $this->line("    Path: {$project['path']}");
+                    if ($project['github_url']) {
+                        $this->line("    GitHub: {$project['github_url']}");
                     }
                     $this->newLine();
                 }
@@ -84,15 +84,15 @@ final class SiteScanCommand extends Command
 
     private function scanDirectory(string $basePath, int $maxDepth, int $currentDepth = 0): array
     {
-        $sites = [];
+        $projects = [];
 
         if ($currentDepth > $maxDepth) {
-            return $sites;
+            return $projects;
         }
 
         $entries = @scandir($basePath);
         if ($entries === false) {
-            return $sites;
+            return $projects;
         }
 
         foreach ($entries as $entry) {
@@ -108,9 +108,9 @@ final class SiteScanCommand extends Command
 
             // Check if this is a git repository
             if (is_dir("{$fullPath}/.git")) {
-                $site = $this->extractSiteInfo($fullPath);
-                if ($site) {
-                    $sites[] = $site;
+                $project = $this->extractProjectInfo($fullPath);
+                if ($project) {
+                    $projects[] = $project;
                 }
 
                 // Don't recurse into git repos
@@ -119,15 +119,15 @@ final class SiteScanCommand extends Command
 
             // Recurse into subdirectories (but skip common non-project dirs)
             if (! in_array($entry, ['node_modules', 'vendor', '.cache', '.config', '.local'])) {
-                $subSites = $this->scanDirectory($fullPath, $maxDepth, $currentDepth + 1);
-                $sites = array_merge($sites, $subSites);
+                $subProjects = $this->scanDirectory($fullPath, $maxDepth, $currentDepth + 1);
+                $projects = array_merge($projects, $subProjects);
             }
         }
 
-        return $sites;
+        return $projects;
     }
 
-    private function extractSiteInfo(string $path): array
+    private function extractProjectInfo(string $path): array
     {
         $name = basename($path);
         $githubUrl = null;

@@ -7,7 +7,7 @@ use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\DatabaseService;
-use App\Services\SiteScanner;
+use App\Services\ProjectScanner;
 use LaravelZero\Framework\Commands\Command;
 
 class PhpCommand extends Command
@@ -15,62 +15,62 @@ class PhpCommand extends Command
     use WithJsonOutput;
 
     protected $signature = 'php
-        {site : The site name to configure}
+        {project : The project name to configure}
         {version? : The PHP version to use (8.3, 8.4, 8.5)}
         {--reset : Reset to default PHP version}
         {--json : Output as JSON}';
 
-    protected $description = 'Set PHP version for a site';
+    protected $description = 'Set PHP version for a project';
 
     protected array $validVersions = ['8.3', '8.4', '8.5'];
 
     public function handle(
         ConfigManager $configManager,
-        SiteScanner $siteScanner,
+        ProjectScanner $projectScanner,
         CaddyfileGenerator $caddyfileGenerator,
         DatabaseService $databaseService
     ): int {
-        $site = $this->argument('site');
+        $project = $this->argument('project');
         $version = $this->argument('version');
         $reset = $this->option('reset');
 
-        // Verify site exists (now includes all directories)
-        $siteInfo = $siteScanner->findSite($site);
-        if (! $siteInfo) {
+        // Verify project exists (now includes all directories)
+        $projectInfo = $projectScanner->findProject($project);
+        if (! $projectInfo) {
             if ($this->wantsJson()) {
                 return $this->outputJsonError(
-                    "Site '{$site}' not found.",
+                    "Project '{$project}' not found.",
                     ExitCode::InvalidArguments->value
                 );
             }
-            $this->error("Site '{$site}' not found.");
+            $this->error("Project '{$project}' not found.");
 
             return ExitCode::InvalidArguments->value;
         }
 
         if ($reset) {
             // Remove from database
-            $databaseService->removeSiteOverride($site);
+            $databaseService->removeSiteOverride($project);
             // Also remove from config (legacy cleanup)
-            $configManager->removeSiteOverride($site);
+            $configManager->removeSiteOverride($project);
 
             $newVersion = $configManager->getDefaultPhpVersion();
 
-            // Only regenerate Caddyfile if site has public folder
-            if ($siteInfo['has_public_folder']) {
+            // Only regenerate Caddyfile if project has public folder
+            if ($projectInfo['has_public_folder']) {
                 $this->regenerateAndReload($caddyfileGenerator);
             }
 
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
-                    'site' => $site,
+                    'project' => $project,
                     'php_version' => $newVersion,
                     'action' => 'reset',
-                    'reloaded' => $siteInfo['has_public_folder'],
+                    'reloaded' => $projectInfo['has_public_folder'],
                 ]);
             }
 
-            $this->info("Reset {$site} to default PHP version ({$newVersion})");
+            $this->info("Reset {$project} to default PHP version ({$newVersion})");
 
             return self::SUCCESS;
         }
@@ -100,28 +100,28 @@ class PhpCommand extends Command
         }
 
         // Save to database (new way)
-        $databaseService->setSitePhpVersion($site, $siteInfo['path'], $version);
+        $databaseService->setSitePhpVersion($project, $projectInfo['path'], $version);
 
-        // Only regenerate Caddyfile if site has public folder
+        // Only regenerate Caddyfile if project has public folder
         $reloaded = false;
-        if ($siteInfo['has_public_folder']) {
+        if ($projectInfo['has_public_folder']) {
             $reloaded = $this->regenerateAndReload($caddyfileGenerator);
         }
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
-                'site' => $site,
+                'project' => $project,
                 'php_version' => $version,
                 'action' => 'set',
                 'reloaded' => $reloaded,
             ]);
         }
 
-        $this->info("Set {$site} to PHP {$version}");
+        $this->info("Set {$project} to PHP {$version}");
 
         if ($reloaded) {
             $this->info('Caddy reloaded');
-        } elseif ($siteInfo['has_public_folder']) {
+        } elseif ($projectInfo['has_public_folder']) {
             $this->warn('Could not reload Caddy. You may need to restart Orbit.');
         }
 

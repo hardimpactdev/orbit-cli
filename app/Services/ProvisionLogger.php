@@ -11,7 +11,7 @@ use LaravelZero\Framework\Commands\Command;
  * CLI implementation of ProvisionLoggerContract.
  *
  * Outputs to console and broadcasts to Reverb via Pusher SDK.
- * Used for synchronous CLI site creation with real-time progress.
+ * Used for synchronous CLI project creation with real-time progress.
  */
 final class ProvisionLogger implements ProvisionLoggerContract
 {
@@ -21,7 +21,7 @@ final class ProvisionLogger implements ProvisionLoggerContract
         private readonly ?ReverbBroadcaster $broadcaster = null,
         private readonly ?Command $command = null,
         private readonly ?string $slug = null,
-        private readonly ?int $siteId = null,
+        private readonly ?int $projectId = null,
     ) {
         if ($this->slug) {
             $this->initializeLogFile();
@@ -90,25 +90,25 @@ final class ProvisionLogger implements ProvisionLoggerContract
             'status' => $status,
         ];
 
-        if ($this->siteId) {
-            $data['site_id'] = $this->siteId;
+        if ($this->projectId) {
+            $data['project_id'] = $this->projectId;
         }
 
         if ($error) {
             $data['error'] = $error;
         }
 
-        // Broadcast to site-specific channel
+        // Broadcast to project-specific channel
         $this->broadcaster->broadcast(
-            "site.{$this->slug}",
-            'site.provision.status',
+            "project.{$this->slug}",
+            'project.provision.status',
             $data
         );
 
         // Also broadcast to global provisioning channel
         $this->broadcaster->broadcast(
             'provisioning',
-            'site.provision.status',
+            'project.provision.status',
             $data
         );
     }
@@ -118,8 +118,8 @@ final class ProvisionLogger implements ProvisionLoggerContract
         return $this->slug ?? '';
     }
 
-    public function getSiteId(): ?int
+    public function getProjectId(): ?int
     {
-        return $this->siteId;
+        return $this->projectId;
     }
 }

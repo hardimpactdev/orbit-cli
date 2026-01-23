@@ -11,19 +11,19 @@ use App\Services\ConfigManager;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
-final class SiteUpdateCommand extends Command
+final class ProjectUpdateCommand extends Command
 {
     use WithJsonOutput;
 
-    protected $signature = 'site:update
-        {path? : Path to the site directory}
-        {--site= : Site name (alternative to path)}
+    protected $signature = 'project:update
+        {path? : Path to the project directory}
+        {--project= : Project name (alternative to path)}
         {--no-git : Skip git pull (rebuild mode)}
         {--no-deps : Skip dependency installation}
         {--no-migrate : Skip database migrations}
         {--json : Output as JSON}';
 
-    protected $description = 'Update a site (git pull + dependencies + migrations)';
+    protected $description = 'Update a project (git pull + dependencies + migrations)';
 
     public function handle(
         ConfigManager $config,
@@ -31,25 +31,25 @@ final class SiteUpdateCommand extends Command
     ): int {
         /** @var string|null $path */
         $path = $this->argument('path');
-        /** @var string|null $site */
-        $site = $this->option('site');
+        /** @var string|null $project */
+        $project = $this->option('project');
 
-        // Resolve path from site name if provided
-        if ($site && ! $path) {
-            $path = $this->resolvePathFromSite($config, $site);
+        // Resolve path from project name if provided
+        if ($project && ! $path) {
+            $path = $this->resolvePathFromProject($config, $project);
             if (! $path) {
-                return $this->failWithMessage("Could not find path for site: {$site}");
+                return $this->failWithMessage("Could not find path for project: {$project}");
             }
         }
 
         // Interactive mode if TTY and no path provided
         if (! $path && $this->input->isInteractive()) {
             /** @var string $path */
-            $path = $this->ask('Site path');
+            $path = $this->ask('Project path');
         }
 
         if (! $path) {
-            return $this->failWithMessage('Site path is required');
+            return $this->failWithMessage('Project path is required');
         }
 
         $path = $this->expandPath($path);
@@ -233,12 +233,12 @@ final class SiteUpdateCommand extends Command
         };
     }
 
-    private function resolvePathFromSite(ConfigManager $config, string $site): ?string
+    private function resolvePathFromProject(ConfigManager $config, string $project): ?string
     {
         $paths = $config->get('paths', []);
         foreach ($paths as $basePath) {
             $expandedPath = $this->expandPath($basePath);
-            $projectPath = "{$expandedPath}/{$site}";
+            $projectPath = "{$expandedPath}/{$project}";
             if (is_dir($projectPath)) {
                 return $projectPath;
             }
@@ -270,7 +270,7 @@ final class SiteUpdateCommand extends Command
             }
         } else {
             if ($success) {
-                $this->info('Site updated successfully!');
+                $this->info('Project updated successfully!');
             } else {
                 $this->error($message ?? 'Update failed');
             }
@@ -297,7 +297,7 @@ final class SiteUpdateCommand extends Command
 
     /**
      * Configure trusted proxies for Laravel 11+ projects.
-     * This is required because sites run behind Caddy reverse proxy.
+     * This is required because projects run behind Caddy reverse proxy.
      *
      * @return array<string, mixed>|null Returns result array if changes were made, null if skipped
      */

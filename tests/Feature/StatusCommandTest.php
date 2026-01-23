@@ -5,13 +5,13 @@ use App\Services\ConfigManager;
 use App\Services\DockerManager;
 use App\Services\HorizonManager;
 use App\Services\PhpManager;
+use App\Services\ProjectScanner;
 use App\Services\ServiceManager;
-use App\Services\SiteScanner;
 
 beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class);
     $this->dockerManager = Mockery::mock(DockerManager::class);
-    $this->siteScanner = Mockery::mock(SiteScanner::class);
+    $this->projectScanner = Mockery::mock(ProjectScanner::class);
     $this->phpManager = Mockery::mock(PhpManager::class);
     $this->serviceManager = Mockery::mock(ServiceManager::class);
     $this->caddyManager = Mockery::mock(CaddyManager::class);
@@ -19,7 +19,7 @@ beforeEach(function () {
 
     $this->app->instance(ConfigManager::class, $this->configManager);
     $this->app->instance(DockerManager::class, $this->dockerManager);
-    $this->app->instance(SiteScanner::class, $this->siteScanner);
+    $this->app->instance(ProjectScanner::class, $this->projectScanner);
     $this->app->instance(PhpManager::class, $this->phpManager);
     $this->app->instance(ServiceManager::class, $this->serviceManager);
     $this->app->instance(CaddyManager::class, $this->caddyManager);
@@ -48,7 +48,7 @@ it('shows status with all services running', function () {
         'mailpit' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-mailpit'],
     ]);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([
+    $this->projectScanner->shouldReceive('scan')->andReturn([
         ['name' => 'mysite', 'domain' => 'mysite.test', 'path' => '/path/to/mysite', 'php_version' => '8.3', 'has_custom_php' => false],
     ]);
     $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/orbit');
@@ -82,7 +82,7 @@ it('shows status with all services stopped', function () {
         'mailpit' => ['running' => false, 'health' => null, 'container' => 'orbit-mailpit'],
     ]);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([]);
+    $this->projectScanner->shouldReceive('scan')->andReturn([]);
     $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/orbit');
     $this->configManager->shouldReceive('getTld')->andReturn('test');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
@@ -114,7 +114,7 @@ it('outputs json when --json flag is used', function () {
         'mailpit' => ['running' => true, 'health' => 'healthy', 'container' => 'orbit-mailpit'],
     ]);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([]);
+    $this->projectScanner->shouldReceive('scan')->andReturn([]);
     $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/orbit');
     $this->configManager->shouldReceive('getTld')->andReturn('test');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');

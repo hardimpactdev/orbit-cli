@@ -2,16 +2,16 @@
 
 namespace App\Services;
 
-use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Models\Project;
 
 class DatabaseService
 {
     public function getSiteOverride(string $slug): ?array
     {
         try {
-            $site = Site::where('slug', $slug)->first();
+            $project = Project::where('slug', $slug)->first();
 
-            return $site ? $site->toArray() : null;
+            return $project ? $project->toArray() : null;
         } catch (\Exception) {
             return null;
         }
@@ -20,7 +20,7 @@ class DatabaseService
     public function setSitePhpVersion(string $slug, string $path, ?string $version): void
     {
         try {
-            Site::updateOrCreate(
+            Project::updateOrCreate(
                 ['slug' => $slug],
                 [
                     'path' => $path,
@@ -35,7 +35,7 @@ class DatabaseService
     public function setSitePath(string $slug, string $path): void
     {
         try {
-            Site::updateOrCreate(
+            Project::updateOrCreate(
                 ['slug' => $slug],
                 ['path' => $path]
             );
@@ -47,9 +47,9 @@ class DatabaseService
     public function getSitePath(string $slug): ?string
     {
         try {
-            $site = Site::where('slug', $slug)->first();
+            $project = Project::where('slug', $slug)->first();
 
-            return $site?->getAttribute('path');
+            return $project?->getAttribute('path');
         } catch (\Exception) {
             return null;
         }
@@ -58,7 +58,7 @@ class DatabaseService
     public function getAllSiteSlugs(): array
     {
         try {
-            return Site::pluck('slug')->toArray();
+            return Project::pluck('slug')->toArray();
         } catch (\Exception) {
             return [];
         }
@@ -67,7 +67,7 @@ class DatabaseService
     public function deleteSite(string $slug): void
     {
         try {
-            Site::where('slug', $slug)->delete();
+            Project::where('slug', $slug)->delete();
         } catch (\Exception) {
             // Silently fail if database not available
         }
@@ -76,7 +76,7 @@ class DatabaseService
     public function removeSiteOverride(string $slug): void
     {
         try {
-            Site::where('slug', $slug)->delete();
+            Project::where('slug', $slug)->delete();
         } catch (\Exception) {
             // Silently fail if database not available
         }
@@ -85,7 +85,7 @@ class DatabaseService
     public function getAllOverrides(): array
     {
         try {
-            return Site::whereNotNull('php_version')->get()->toArray();
+            return Project::whereNotNull('php_version')->get()->toArray();
         } catch (\Exception) {
             return [];
         }
@@ -124,7 +124,7 @@ class DatabaseService
     public function truncate(): void
     {
         try {
-            Site::truncate();
+            Project::truncate();
         } catch (\Exception) {
             // Silently fail if database not available
         }

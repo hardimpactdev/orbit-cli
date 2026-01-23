@@ -11,7 +11,7 @@ class WorktreeService
 
     public function __construct(
         protected ConfigManager $configManager,
-        protected SiteScanner $siteScanner
+        protected ProjectScanner $projectScanner
     ) {
         $this->worktreesPath = $this->configManager->getConfigPath().'/worktrees.json';
     }
@@ -21,35 +21,35 @@ class WorktreeService
      */
     public function getAllWorktrees(): array
     {
-        $sites = $this->siteScanner->scan();
+        $projects = $this->projectScanner->scan();
         $tld = $this->configManager->getTld();
         $linkedWorktrees = $this->loadLinkedWorktrees();
         $allWorktrees = [];
         $newWorktreesDetected = false;
 
-        foreach ($sites as $site) {
-            $siteWorktrees = $this->detectWorktrees($site['path']);
+        foreach ($projects as $project) {
+            $projectWorktrees = $this->detectWorktrees($project['path']);
 
-            foreach ($siteWorktrees as $worktree) {
+            foreach ($projectWorktrees as $worktree) {
                 // Check if already linked
-                $isLinked = isset($linkedWorktrees[$site['name']][$worktree['name']]);
+                $isLinked = isset($linkedWorktrees[$project['name']][$worktree['name']]);
 
                 // Auto-link new worktrees
                 if (! $isLinked) {
-                    $this->linkWorktree($site['name'], $worktree['path'], $worktree['name']);
+                    $this->linkWorktree($project['name'], $worktree['path'], $worktree['name']);
                     $linkedWorktrees = $this->loadLinkedWorktrees(); // Reload
                     $newWorktreesDetected = true;
                 }
 
-                $domain = "{$worktree['name']}.{$site['name']}.{$tld}";
+                $domain = "{$worktree['name']}.{$project['name']}.{$tld}";
 
                 $allWorktrees[] = [
-                    'site' => $site['name'],
+                    'project' => $project['name'],
                     'name' => $worktree['name'],
                     'branch' => $worktree['branch'] ?? null,
                     'path' => $worktree['path'],
                     'domain' => $domain,
-                    'php_version' => $site['php_version'],
+                    'php_version' => $project['php_version'],
                     'secure' => true,
                 ];
             }
@@ -284,31 +284,31 @@ class WorktreeService
     public function getLinkedWorktreesForCaddy(): array
     {
         $linkedWorktrees = $this->loadLinkedWorktrees();
-        $sites = $this->siteScanner->scan();
+        $projects = $this->projectScanner->scan();
         $tld = $this->configManager->getTld();
         $result = [];
 
-        foreach ($linkedWorktrees as $siteName => $worktrees) {
-            // Find the site to get PHP version
-            $site = null;
-            foreach ($sites as $s) {
-                if ($s['name'] === $siteName) {
-                    $site = $s;
+        foreach ($linkedWorktrees as $projectName => $worktrees) {
+            // Find the project to get PHP version
+            $project = null;
+            foreach ($projects as $p) {
+                if ($p['name'] === $projectName) {
+                    $project = $p;
                     break;
                 }
             }
 
-            if (! $site) {
+            if (! $project) {
                 continue;
             }
 
             foreach ($worktrees as $name => $data) {
                 $result[] = [
-                    'site' => $siteName,
+                    'project' => $projectName,
                     'name' => $name,
                     'path' => $data['path'],
-                    'domain' => "{$name}.{$siteName}.{$tld}",
-                    'php_version' => $site['php_version'],
+                    'domain' => "{$name}.{$projectName}.{$tld}",
+                    'php_version' => $project['php_version'],
                 ];
             }
         }

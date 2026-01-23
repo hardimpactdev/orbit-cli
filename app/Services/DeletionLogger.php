@@ -8,7 +8,7 @@ use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
 use LaravelZero\Framework\Commands\Command;
 
 /**
- * Logger for site deletion operations in the CLI.
+ * Logger for project deletion operations in the CLI.
  *
  * Handles logging to files and broadcasting status updates
  * via Pusher SDK to Reverb WebSocket + console output.
@@ -21,7 +21,7 @@ final class DeletionLogger implements ProvisionLoggerContract
         private readonly ?ReverbBroadcaster $broadcaster = null,
         private readonly ?Command $command = null,
         private readonly ?string $slug = null,
-        private readonly ?int $siteId = null,
+        private readonly ?int $projectId = null,
     ) {
         if ($this->slug) {
             $this->initializeLogFile();
@@ -92,17 +92,17 @@ final class DeletionLogger implements ProvisionLoggerContract
             $data['error'] = $error;
         }
 
-        // Broadcast to site-specific channel
+        // Broadcast to project-specific channel
         $this->broadcaster->broadcast(
-            "site.{$this->slug}",
-            'site.deletion.status',
+            "project.{$this->slug}",
+            'project.deletion.status',
             $data
         );
 
         // Also broadcast to global provisioning channel
         $this->broadcaster->broadcast(
             'provisioning',
-            'site.deletion.status',
+            'project.deletion.status',
             $data
         );
     }
@@ -116,10 +116,10 @@ final class DeletionLogger implements ProvisionLoggerContract
     }
 
     /**
-     * Get the site ID for this logger instance.
+     * Get the project ID for this logger instance.
      */
-    public function getSiteId(): ?int
+    public function getProjectId(): ?int
     {
-        return $this->siteId;
+        return $this->projectId;
     }
 }

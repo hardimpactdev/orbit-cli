@@ -10,7 +10,7 @@ class CaddyfileGenerator
 
     public function __construct(
         protected ConfigManager $configManager,
-        protected SiteScanner $siteScanner,
+        protected ProjectScanner $projectScanner,
         protected ?PhpManager $phpManager = null,
         protected ?WorktreeService $worktreeService = null
     ) {
@@ -36,7 +36,7 @@ class CaddyfileGenerator
 
     protected function generateCaddyfile(): void
     {
-        $sites = $this->siteScanner->scanSites();
+        $projects = $this->projectScanner->scanProjects();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
         $tld = $this->configManager->get('tld') ?: 'test';
         $defaultSocket = $this->getSocketPath($defaultPhp);
@@ -61,14 +61,14 @@ class CaddyfileGenerator
 ";
         }
 
-        // Generate entry for each site
-        foreach ($sites as $site) {
-            $socket = $site['has_custom_php']
-                ? $this->getSocketPath($site['php_version'])
+        // Generate entry for each project
+        foreach ($projects as $project) {
+            $socket = $project['has_custom_php']
+                ? $this->getSocketPath($project['php_version'])
                 : $defaultSocket;
-            $root = $site['path'].'/public';
+            $root = $project['path'].'/public';
 
-            $caddyfile .= "{$site['domain']} {
+            $caddyfile .= "{$project['domain']} {
     tls internal
     root * {$root}
     encode gzip

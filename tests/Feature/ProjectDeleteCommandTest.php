@@ -5,7 +5,7 @@ use App\Services\ConfigManager;
 use HardImpact\Orbit\Contracts\ProvisionLoggerContract;
 use HardImpact\Orbit\Data\DeletionContext;
 use HardImpact\Orbit\Data\StepResult;
-use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Models\Project;
 use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -37,7 +37,7 @@ beforeEach(function () {
     $_SERVER['HOME'] = '/tmp';
     @mkdir('/tmp/.config/orbit/logs/deletion', 0755, true);
 
-    // Setup in-memory database for Site model
+    // Setup in-memory database for Project model
     config(['database.default' => 'testing']);
     config(['database.connections.testing' => [
         'driver' => 'sqlite',
@@ -45,8 +45,8 @@ beforeEach(function () {
         'prefix' => '',
     ]]);
 
-    // Create sites table
-    Schema::connection('testing')->create('sites', function ($table) {
+    // Create projects table
+    Schema::connection('testing')->create('projects', function ($table) {
         $table->id();
         $table->unsignedBigInteger('environment_id')->nullable();
         $table->string('name');
@@ -55,10 +55,10 @@ beforeEach(function () {
         $table->string('path')->nullable();
         $table->string('php_version')->nullable();
         $table->string('github_repo')->nullable();
-        $table->string('site_type')->nullable();
+        $table->string('project_type')->nullable();
         $table->boolean('has_public_folder')->default(false);
         $table->string('domain')->nullable();
-        $table->string('site_url')->nullable();
+        $table->string('url')->nullable();
         $table->string('status')->default('queued');
         $table->text('error_message')->nullable();
         $table->string('job_id')->nullable();
@@ -72,16 +72,16 @@ afterEach(function () {
     @unlink('/tmp/.config/orbit/logs/deletion/nonexistent.log');
 });
 
-it('deletes site via MCP when given slug with --force', function () {
+it('deletes project via MCP when given slug with --force', function () {
     Http::fake([
         'localhost:8000/mcp' => Http::response([
             'jsonrpc' => '2.0',
             'result' => [
-                'content' => [['text' => '# Site Deleted']],
+                'content' => [['text' => '# Project Deleted']],
                 'meta' => [
                     'id' => 1,
-                    'name' => 'Test Site',
-                    'slug' => 'test-site',
+                    'name' => 'Test Project',
+                    'slug' => 'test-project',
                 ],
             ],
             'id' => 'test-id',
@@ -89,11 +89,11 @@ it('deletes site via MCP when given slug with --force', function () {
     ]);
 
     // Just check that the command executes and makes MCP call
-    $this->artisan('site:delete', ['slug' => 'test-site', '--force' => true, '--json' => true]);
+    $this->artisan('project:delete', ['slug' => 'test-project', '--force' => true, '--json' => true]);
 
     Http::assertSent(function ($request) {
         return $request->url() === 'http://localhost:8000/mcp'
-            && $request['params']['name'] === 'delete-site';
+            && $request['params']['name'] === 'delete-project';
     });
 });
 
@@ -101,13 +101,13 @@ it('handles MCP error response with warning and continues', function () {
     Http::fake([
         'localhost:8000/mcp' => Http::response([
             'jsonrpc' => '2.0',
-            'error' => ['message' => 'Site not found'],
+            'error' => ['message' => 'Project not found'],
             'id' => 'test-id',
         ]),
     ]);
 
     // Command should succeed but with warnings - MCP errors are non-fatal
-    $this->artisan('site:delete', ['slug' => 'nonexistent', '--force' => true, '--json' => true])
+    $this->artisan('project:delete', ['slug' => 'nonexistent', '--force' => true, '--json' => true])
         ->assertExitCode(0);
 });
 
@@ -117,6 +117,6 @@ it('handles connection error with warning and continues', function () {
     ]);
 
     // Command should succeed but with warnings - connection errors are non-fatal
-    $this->artisan('site:delete', ['slug' => 'test-site', '--force' => true, '--json' => true])
+    $this->artisan('project:delete', ['slug' => 'test-project', '--force' => true, '--json' => true])
         ->assertExitCode(0);
 });

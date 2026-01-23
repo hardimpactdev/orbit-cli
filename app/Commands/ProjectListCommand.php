@@ -6,53 +6,53 @@ namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
 use App\Services\ConfigManager;
-use App\Services\SiteScanner;
+use App\Services\ProjectScanner;
 use LaravelZero\Framework\Commands\Command;
 
-final class SiteListCommand extends Command
+final class ProjectListCommand extends Command
 {
     use WithJsonOutput;
 
-    protected $signature = 'site:list {--json : Output as JSON}';
+    protected $signature = 'project:list {--json : Output as JSON}';
 
-    protected $description = 'List ALL directories in scan paths as sites';
+    protected $description = 'List ALL directories in scan paths as projects';
 
-    public function handle(SiteScanner $siteScanner, ConfigManager $configManager): int
+    public function handle(ProjectScanner $projectScanner, ConfigManager $configManager): int
     {
-        $sites = $siteScanner->scan();
+        $projects = $projectScanner->scan();
         $tld = $configManager->getTld();
         $defaultPhp = $configManager->getDefaultPhpVersion();
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
-                'sites' => $sites,
-                'count' => count($sites),
+                'projects' => $projects,
+                'count' => count($projects),
                 'tld' => $tld,
                 'default_php_version' => $defaultPhp,
             ]);
         }
 
-        if (empty($sites)) {
-            $this->warn('No sites found. Add paths to your config.json file.');
+        if (empty($projects)) {
+            $this->warn('No projects found. Add paths to your config.json file.');
 
             return self::SUCCESS;
         }
 
-        $this->info('Sites:');
+        $this->info('Projects:');
         $this->newLine();
 
         $tableData = [];
-        foreach ($sites as $site) {
-            $phpDisplay = $site['php_version'];
-            if ($site['has_custom_php']) {
+        foreach ($projects as $project) {
+            $phpDisplay = $project['php_version'];
+            if ($project['has_custom_php']) {
                 $phpDisplay .= ' (custom)';
             }
 
-            $hasPublic = $site['has_public_folder'] ? 'Yes' : 'No';
-            $domain = $site['domain'] ?? '-';
+            $hasPublic = $project['has_public_folder'] ? 'Yes' : 'No';
+            $domain = $project['domain'] ?? '-';
 
             $tableData[] = [
-                $site['name'],
+                $project['name'],
                 $hasPublic,
                 $domain,
                 $phpDisplay,
@@ -64,7 +64,7 @@ final class SiteListCommand extends Command
         $this->newLine();
         $this->line("TLD: {$tld}");
         $this->line("Default PHP: {$defaultPhp}");
-        $this->line('Total: '.count($sites).' sites');
+        $this->line('Total: '.count($projects).' projects');
 
         return self::SUCCESS;
     }

@@ -8,8 +8,8 @@ use App\Services\ConfigManager;
 use App\Services\DockerManager;
 use App\Services\HorizonManager;
 use App\Services\PhpManager;
+use App\Services\ProjectScanner;
 use App\Services\ServiceManager;
-use App\Services\SiteScanner;
 use LaravelZero\Framework\Commands\Command;
 
 class StatusCommand extends Command
@@ -24,7 +24,7 @@ class StatusCommand extends Command
         ServiceManager $serviceManager,
         DockerManager $dockerManager,
         ConfigManager $configManager,
-        SiteScanner $siteScanner,
+        ProjectScanner $projectScanner,
         PhpManager $phpManager,
         CaddyManager $caddyManager,
         HorizonManager $horizonManager
@@ -115,7 +115,7 @@ class StatusCommand extends Command
             }
         }
 
-        $sites = $siteScanner->scan();
+        $projects = $projectScanner->scan();
         $isRunning = $runningCount > 0;
 
         if ($this->wantsJson()) {
@@ -126,7 +126,7 @@ class StatusCommand extends Command
                 'services_running' => $runningCount,
                 'services_healthy' => $healthyCount,
                 'services_total' => count($services),
-                'sites_count' => count($sites),
+                'projects_count' => count($projects),
                 'config_path' => $configManager->getConfigPath(),
                 'tld' => $configManager->getTld(),
                 'default_php_version' => $configManager->getDefaultPhpVersion(),
@@ -155,7 +155,7 @@ class StatusCommand extends Command
 
         $this->newLine();
         $this->line('  <fg=cyan>Architecture:</> '.$architecture);
-        $this->line('  <fg=cyan>Sites:</> '.count($sites));
+        $this->line('  <fg=cyan>Projects:</> '.count($projects));
         $this->line('  <fg=cyan>Config:</> '.$configManager->getConfigPath());
         $this->line('  <fg=cyan>TLD:</> .'.$configManager->getTld());
         $this->line('  <fg=cyan>Default PHP:</> '.$configManager->getDefaultPhpVersion());

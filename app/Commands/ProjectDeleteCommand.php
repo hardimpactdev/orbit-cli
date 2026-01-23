@@ -11,12 +11,12 @@ use App\Services\DeletionLogger;
 use App\Services\McpClient;
 use App\Services\ReverbBroadcaster;
 use HardImpact\Orbit\Data\DeletionContext;
-use HardImpact\Orbit\Models\Site;
+use HardImpact\Orbit\Models\Project;
 use HardImpact\Orbit\Services\Deletion\DeletionPipeline;
 use LaravelZero\Framework\Commands\Command;
 
 /**
- * CLI command for deleting sites.
+ * CLI command for deleting projects.
  *
  * This command runs the DeletionPipeline synchronously, giving real-time
  * console output while broadcasting updates to Reverb for web UI updates.
@@ -25,25 +25,25 @@ use LaravelZero\Framework\Commands\Command;
  * - PostgreSQL database
  * - Project files
  * - Caddy configuration
- * - Site record in database
+ * - Project record in database
  * - Optional: Sequence integration cleanup
  *
  * @see \HardImpact\Orbit\Services\Deletion\DeletionPipeline
  */
-final class SiteDeleteCommand extends Command
+final class ProjectDeleteCommand extends Command
 {
     use WithJsonOutput;
 
-    protected $signature = 'site:delete
-        {slug? : Site slug to delete}
-        {--slug= : Site slug to delete (alternative)}
-        {--id= : Site ID to delete (alternative to slug)}
+    protected $signature = 'project:delete
+        {slug? : Project slug to delete}
+        {--slug= : Project slug to delete (alternative)}
+        {--id= : Project ID to delete (alternative to slug)}
         {--force : Skip confirmation prompt}
         {--delete-repo : Also delete the GitHub repository (irreversible)}
         {--keep-db : Keep the database (do not drop it)}
         {--json : Output as JSON}';
 
-    protected $description = 'Delete a site and cascade to integrations (Sequence + VK + Linear + Database)';
+    protected $description = 'Delete a project and cascade to integrations (Sequence + VK + Linear + Database)';
 
     private ?DeletionLogger $logger = null;
 
@@ -62,20 +62,20 @@ final class SiteDeleteCommand extends Command
         // Interactive mode if TTY and no slug/id provided
         if (! $slug && ! $id && $this->input->isInteractive()) {
             /** @var string $slug */
-            $slug = $this->ask('Site slug to delete');
+            $slug = $this->ask('Project slug to delete');
         }
 
         if (! $slug && ! $id) {
-            return $this->failWithMessage('Site slug or --id is required');
+            return $this->failWithMessage('Project slug or --id is required');
         }
 
-        // Try to find the site in our database
-        $site = $this->findSite($slug, $id);
-        $siteId = $site?->id;
+        // Try to find the project in our database
+        $project = $this->findProject($slug, $id);
+        $projectId = $project?->id;
 
-        // If we have a site record, use its slug
-        if ($site) {
-            $slug = $site->slug;
+        // If we have a project record, use its slug
+        if ($project) {
+            $slug = $project->slug;
         }
 
         // Initialize logger with broadcaster for status updates
@@ -83,7 +83,7 @@ final class SiteDeleteCommand extends Command
             broadcaster: $broadcaster,
             command: $this->wantsJson() ? null : $this,
             slug: $slug,
-            siteId: $siteId,
+            projectId: $projectId,
         );
 
         // Broadcast initial deleting status
@@ -93,7 +93,7 @@ final class SiteDeleteCommand extends Command
         $force = (bool) $this->option('force');
         if (! $force && $this->input->isInteractive()) {
             $confirm = $this->ask(
-                'Type the site slug to confirm deletion',
+                'Type the project slug to confirm deletion',
             );
 
             if ($confirm !== $slug && $confirm !== $id) {
@@ -110,7 +110,7 @@ final class SiteDeleteCommand extends Command
         if ($mcp->isConfigured()) {
             $this->logger->broadcast('removing_sequence');
             try {
-                $result = $mcp->callTool('delete-site', [
+                $result = $mcp->callTool('delete-project', [
                     'slug' => $slug,
                     'id' => $id ? (int) $id : null,
                     'confirm_slug' => $slug ?? $this->getSlugFromId($mcp, (int) $id),
@@ -137,7 +137,7 @@ final class SiteDeleteCommand extends Command
         }
 
         // Build deletion context
-        $context = $this->buildDeletionContext($site, $slug, $config);
+        $context = $this->buildDeletionContext($project, $slug, $config);
 
         // Run the deletion pipeline
         $result = $pipeline->run($context, $this->logger);
@@ -148,17 +148,17 @@ final class SiteDeleteCommand extends Command
             return $this->failWithMessage($result->error ?? 'Deletion failed');
         }
 
-        // Delete Site record from database (if exists)
-        if ($site) {
-            $site->delete();
-            $this->logger->info('Site record deleted from database');
+        // Delete Project record from database (if exists)
+        if ($project) {
+            $project->delete();
+            $this->logger->info('Project record deleted from database');
         }
 
         // Broadcast successful deletion
         $this->logger->broadcast('deleted');
 
         $response = [
-            'message' => 'Site deleted successfully',
+            'message' => 'Project deleted successfully',
             'slug' => $slug,
             'deleted' => array_merge($meta, [
                 'database' => ! $this->option('keep-db'),
@@ -174,28 +174,28 @@ final class SiteDeleteCommand extends Command
     }
 
     /**
-     * Find site by slug or ID.
+     * Find project by slug or ID.
      */
-    private function findSite(?string $slug, ?string $id): ?Site
+    private function findProject(?string $slug, ?string $id): ?Project
     {
         if ($id) {
-            return Site::find((int) $id);
+            return Project::find((int) $id);
         }
 
         if ($slug) {
-            return Site::where('slug', $slug)->first();
+            return Project::where('slug', $slug)->first();
         }
 
         return null;
     }
 
     /**
-     * Build deletion context from site or manual lookup.
+     * Build deletion context from project or manual lookup.
      */
-    private function buildDeletionContext(?Site $site, ?string $slug, ConfigManager $config): DeletionContext
+    private function buildDeletionContext(?Project $project, ?string $slug, ConfigManager $config): DeletionContext
     {
-        if ($site) {
-            return DeletionContext::fromSite($site, (bool) $this->option('keep-db'))
+        if ($project) {
+            return DeletionContext::fromProject($project, (bool) $this->option('keep-db'))
                 ->withDatabaseFromEnv();
         }
 
@@ -205,7 +205,7 @@ final class SiteDeleteCommand extends Command
         $context = new DeletionContext(
             slug: $slug ?? 'unknown',
             projectPath: $projectPath ?? '',
-            siteId: null,
+            projectId: null,
             keepDatabase: (bool) $this->option('keep-db'),
             keepRepository: true,
             dbConnection: null,
@@ -218,9 +218,9 @@ final class SiteDeleteCommand extends Command
 
     private function getSlugFromId(McpClient $mcp, int $id): string
     {
-        $result = $mcp->callTool('get-site', ['id' => $id]);
+        $result = $mcp->callTool('get-project', ['id' => $id]);
 
-        return $result['meta']['slug'] ?? throw new \RuntimeException('Could not retrieve site slug');
+        return $result['meta']['slug'] ?? throw new \RuntimeException('Could not retrieve project slug');
     }
 
     private function findLocalPath(ConfigManager $config, ?string $slug): ?string
@@ -232,9 +232,9 @@ final class SiteDeleteCommand extends Command
         $paths = $config->getPaths();
         foreach ($paths as $basePath) {
             $expandedPath = $this->expandPath($basePath);
-            $sitePath = "{$expandedPath}/{$slug}";
-            if (is_dir($sitePath)) {
-                return $sitePath;
+            $projectPath = "{$expandedPath}/{$slug}";
+            if (is_dir($projectPath)) {
+                return $projectPath;
             }
         }
 

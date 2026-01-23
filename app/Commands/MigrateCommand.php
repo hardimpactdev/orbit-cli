@@ -11,7 +11,7 @@ class MigrateCommand extends Command
 {
     protected $signature = 'schema:migrate {--dry-run : Show what would be done without making changes}';
 
-    protected $description = 'Migrate legacy CLI database schema (projects table to sites table)';
+    protected $description = 'Migrate legacy CLI database schema (sites table to projects table)';
 
     public function handle(DatabaseService $databaseService): int
     {
