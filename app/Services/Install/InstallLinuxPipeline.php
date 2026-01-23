@@ -21,6 +21,7 @@ final readonly class InstallLinuxPipeline
             ['action' => Linux\CheckPrerequisites::class, 'name' => 'Checking prerequisites'],
             ['action' => Linux\InstallDocker::class, 'name' => 'Installing Docker'],
             ['action' => Linux\InstallPhp::class, 'name' => 'Installing PHP'],
+            ['action' => Linux\ConfigurePhpFpm::class, 'name' => 'Configuring PHP-FPM'],
             ['action' => Linux\InstallCaddy::class, 'name' => 'Installing Caddy'],
             ['action' => Linux\InstallSupportTools::class, 'name' => 'Installing support tools'],
 
@@ -45,6 +46,9 @@ final readonly class InstallLinuxPipeline
             ['action' => Shared\StartServices::class, 'name' => 'Starting services'],
             ['action' => Shared\InstallComposerLink::class, 'name' => 'Installing composer-link'],
             ['action' => Linux\TrustRootCa::class, 'name' => 'Trusting SSL certificate'],
+
+            // Phase 6: Health Check
+            ['action' => Shared\HealthCheck::class, 'name' => 'Running health checks'],
         ];
     }
 

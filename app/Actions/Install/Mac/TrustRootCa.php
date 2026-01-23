@@ -6,16 +6,11 @@ namespace App\Actions\Install\Mac;
 
 use App\Data\Install\InstallContext;
 use App\Data\Provision\StepResult;
-use App\Services\DockerManager;
 use App\Services\Install\InstallLogger;
 use Illuminate\Support\Facades\Process;
 
 final readonly class TrustRootCa
 {
-    public function __construct(
-        private DockerManager $dockerManager,
-    ) {}
-
     public function handle(InstallContext $context, InstallLogger $logger): StepResult
     {
         if ($context->skipTrust) {
@@ -24,39 +19,27 @@ final readonly class TrustRootCa
             return StepResult::success();
         }
 
-        // Check if Caddy container is running
-        if (! $this->dockerManager->isRunning('orbit-caddy')) {
-            $logger->warn('Caddy container not running - certificate trust skipped');
+        // Use host-based Caddy certificate path
+        $certPath = $_SERVER['HOME'].'/Library/Application Support/Caddy/pki/authorities/local/root.crt';
 
-            return StepResult::success();
-        }
-
-        $tempCert = '/tmp/orbit-caddy-root.crt';
-
-        // Extract certificate from container
-        $extractResult = Process::run(
-            "docker exec orbit-caddy cat /data/caddy/pki/authorities/local/root.crt > {$tempCert}"
-        );
-
-        if (! $extractResult->successful() || ! file_exists($tempCert) || filesize($tempCert) === 0) {
-            $logger->warn('Failed to extract certificate - certificates may not be trusted');
-            $logger->info('Try visiting https://localhost first to trigger certificate generation');
+        if (! file_exists($certPath)) {
+            $logger->warn('Caddy root certificate not found - certificates may not be trusted');
+            $logger->info('Certificate expected at: '.$certPath);
+            $logger->info('Try running Caddy first to generate certificates');
 
             return StepResult::success();
         }
 
         // Add to macOS Keychain
-        $logger->step('Adding to macOS Keychain (sudo required)...');
+        $logger->step('Adding to macOS Keychain (sudo authorization required)...');
 
         $trustResult = Process::run(
-            "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain {$tempCert}"
+            "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain \"{$certPath}\""
         );
 
-        // Cleanup
-        @unlink($tempCert);
-
         if (! $trustResult->successful()) {
-            $logger->warn('Failed to add certificate to Keychain');
+            $logger->warn('Failed to add certificate to Keychain - continuing installation');
+            $logger->info('You may need to manually trust the certificate or run with sudo authorization');
 
             return StepResult::success();
         }

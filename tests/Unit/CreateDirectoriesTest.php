@@ -2,8 +2,8 @@
 
 use App\Actions\Install\Shared\CreateDirectories;
 use App\Data\Install\InstallContext;
-use App\Services\Install\InstallLogger;
-use LaravelZero\Framework\Commands\Command;
+
+require_once __DIR__.'/../Helpers/TestLogger.php';
 
 beforeEach(function () {
     $this->testDir = sys_get_temp_dir().'/orbit-install-test-'.uniqid();
@@ -21,15 +21,6 @@ afterEach(function () {
         rmdir($this->testDir);
     }
 });
-
-function createTestLogger(): InstallLogger
-{
-    $command = Mockery::mock(Command::class);
-    $command->shouldReceive('newLine')->andReturnNull();
-    $command->shouldReceive('line')->andReturnNull();
-
-    return new InstallLogger($command);
-}
 
 it('creates all required directories', function () {
     $context = new InstallContext(

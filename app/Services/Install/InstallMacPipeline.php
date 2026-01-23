@@ -22,6 +22,7 @@ final readonly class InstallMacPipeline
             ['action' => Mac\InstallHomebrew::class, 'name' => 'Checking Homebrew'],
             ['action' => Mac\InstallOrbStack::class, 'name' => 'Installing OrbStack'],
             ['action' => Mac\InstallPhp::class, 'name' => 'Installing PHP'],
+            ['action' => Mac\ConfigurePhpFpm::class, 'name' => 'Configuring PHP-FPM'],
             ['action' => Mac\InstallCaddy::class, 'name' => 'Installing Caddy'],
             ['action' => Mac\InstallSupportTools::class, 'name' => 'Installing support tools'],
 
@@ -46,6 +47,9 @@ final readonly class InstallMacPipeline
             ['action' => Shared\StartServices::class, 'name' => 'Starting services'],
             ['action' => Shared\InstallComposerLink::class, 'name' => 'Installing composer-link'],
             ['action' => Mac\TrustRootCa::class, 'name' => 'Trusting SSL certificate'],
+
+            // Phase 6: Health Check
+            ['action' => Shared\HealthCheck::class, 'name' => 'Running health checks'],
         ];
     }
 

@@ -51,19 +51,19 @@ final readonly class InstallWebApp
             return StepResult::failed('Failed to install web app dependencies: '.$result->errorOutput());
         }
 
+        // Ensure SQLite database exists before migrations
+        $dbPath = "{$destPath}/database.sqlite";
+        if (! File::exists($dbPath)) {
+            File::put($dbPath, '');
+        }
+
         // Run migrations
         $migrateResult = Process::timeout(60)
             ->path($destPath)
             ->run('php artisan migrate --force');
 
         if (! $migrateResult->successful()) {
-            return StepResult::failed('Failed to run web app migrations');
-        }
-
-        // Ensure SQLite database exists before seeding
-        $dbPath = "{$destPath}/database.sqlite";
-        if (! File::exists($dbPath)) {
-            File::put($dbPath, '');
+            return StepResult::failed('Failed to run web app migrations: '.$migrateResult->errorOutput());
         }
 
         // Seed local environment
@@ -73,7 +73,7 @@ final readonly class InstallWebApp
             ->run("php artisan orbit:init --name=\"{$hostname}\"");
 
         if (! $seedResult->successful()) {
-            $logger->warn('Failed to seed web app - it may need manual setup');
+            $logger->warn('Failed to seed web app - it may need manual setup: '.$seedResult->errorOutput());
         }
 
         $logger->success('Web app installed');
@@ -158,7 +158,7 @@ final readonly class InstallWebApp
 APP_NAME=Orbit
 APP_ENV=production
 APP_KEY={$appKey}
-APP_DEBUG=false
+APP_DEBUG=true
 APP_URL=https://orbit.{$tld}
 ORBIT_MODE=web
 

@@ -11,7 +11,7 @@ describe('InstallLinuxPipeline', function () {
         $pipeline = new InstallLinuxPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps)->toHaveCount(19);
+        expect($steps)->toHaveCount(21);
     });
 
     it('starts with prerequisites check', function () {
@@ -41,11 +41,11 @@ describe('InstallLinuxPipeline', function () {
         expect($actions)->toContain(Shared\StartServices::class);
     });
 
-    it('ends with SSL certificate trust', function () {
+    it('ends with health check', function () {
         $pipeline = new InstallLinuxPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps[count($steps) - 1]['action'])->toBe(Linux\TrustRootCa::class);
+        expect($steps[count($steps) - 1]['action'])->toBe(Shared\HealthCheck::class);
     });
 });
 
@@ -54,7 +54,7 @@ describe('InstallMacPipeline', function () {
         $pipeline = new InstallMacPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps)->toHaveCount(20);
+        expect($steps)->toHaveCount(22);
     });
 
     it('starts with prerequisites check', function () {
@@ -91,10 +91,10 @@ describe('InstallMacPipeline', function () {
         expect($actions)->toContain(Shared\StartServices::class);
     });
 
-    it('ends with SSL certificate trust', function () {
+    it('ends with health check', function () {
         $pipeline = new InstallMacPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps[count($steps) - 1]['action'])->toBe(Mac\TrustRootCa::class);
+        expect($steps[count($steps) - 1]['action'])->toBe(Shared\HealthCheck::class);
     });
 });
