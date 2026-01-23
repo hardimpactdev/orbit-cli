@@ -104,59 +104,49 @@ class UpgradeCommand extends Command
                 );
             }
 
-            // Replace the current binary
-            if (! $this->replaceCurrentBinary($pharPath, $tempFile)) {
-                return $this->handleError(
-                    'Failed to replace the current binary. You may need to run with sudo.',
-                    ExitCode::GeneralError
-                );
-            }
-
-            // CRITICAL: After replacing the binary, we must terminate IMMEDIATELY.
-            // The current process has the old PHAR loaded in memory. Any PHP shutdown
-            // sequence (destructors, shutdown handlers, finally blocks) can trigger
-            // autoloading, which reads from the NEW file using OLD offsets = garbage.
+            // CRITICAL: We cannot replace the PHAR while this process is running.
+            // PHP's shutdown handlers will try to autoload classes from the NEW phar
+            // using OLD memory offsets, causing garbage output.
             //
-            // We use posix_kill(SIGKILL) to terminate without ANY cleanup.
-            // The temp file will be cleaned up by the OS eventually.
+            // Solution: Spawn a background process to do the replacement AFTER we exit.
+            // This way, our process exits cleanly, THEN the file is replaced.
 
-            // Clean up temp file BEFORE we terminate
-            @unlink($tempFile);
+            $script = sprintf(
+                'sleep 0.5 && mv %s %s && rm -f %s 2>/dev/null',
+                escapeshellarg($tempFile),
+                escapeshellarg($pharPath),
+                escapeshellarg($pharPath.'.bak')
+            );
+
+            // Make the new file executable before the move
+            @chmod($tempFile, 0755);
+
+            // Create backup
+            @copy($pharPath, $pharPath.'.bak');
+
+            // Spawn background process to replace the binary after we exit
+            exec(sprintf('nohup sh -c %s > /dev/null 2>&1 &', escapeshellarg($script)));
 
             if ($this->wantsJson()) {
-                echo json_encode([
-                    'success' => true,
-                    'data' => [
-                        'action' => 'upgrade',
-                        'previous_version' => $currentVersion,
-                        'new_version' => $latestVersion,
-                        'upgraded' => true,
-                        'message' => 'Run `orbit init` to update the companion web app.',
-                    ],
-                ], JSON_PRETTY_PRINT)."\n";
-            } else {
-                echo "\033[32mSuccessfully upgraded to {$latestVersion}!\033[0m\n";
-                echo "\033[32mRun `orbit init` to update the companion web app.\033[0m\n";
+                return $this->outputJsonSuccess([
+                    'action' => 'upgrade',
+                    'previous_version' => $currentVersion,
+                    'new_version' => $latestVersion,
+                    'upgraded' => true,
+                    'message' => 'Run `orbit init` to update the companion web app.',
+                ]);
             }
 
-            // We need to exit without PHP running destructors/shutdown handlers,
-            // as they may autoload classes from the NEW phar using OLD memory offsets.
-            //
-            // Unregister autoloaders to prevent accidental class loading during shutdown.
-            $autoloaders = spl_autoload_functions();
-            if ($autoloaders) {
-                foreach ($autoloaders as $autoloader) {
-                    spl_autoload_unregister($autoloader);
-                }
-            }
+            $this->info("Successfully upgraded to {$latestVersion}!");
+            $this->info('Run `orbit init` to update the companion web app.');
 
-            // Now we can exit cleanly - no autoloading will occur
-            exit(0);
-        } finally {
-            // This should not run if posix_kill worked, but just in case
+            return self::SUCCESS;
+        } catch (\Throwable $e) {
+            // Clean up temp file on error
             if (file_exists($tempFile)) {
                 @unlink($tempFile);
             }
+            throw $e;
         }
     }
 
@@ -254,33 +244,6 @@ class UpgradeCommand extends Command
         }
 
         return str_contains($fullContent, '__HALT_COMPILER()');
-    }
-
-    private function replaceCurrentBinary(string $currentPath, string $newPath): bool
-    {
-        // Make the new file executable
-        if (! @chmod($newPath, 0755)) {
-            return false;
-        }
-
-        // Backup current binary
-        $backupPath = $currentPath.'.bak';
-        if (! @copy($currentPath, $backupPath)) {
-            return false;
-        }
-
-        // Replace with new binary
-        if (! @rename($newPath, $currentPath)) {
-            // Restore backup on failure
-            @rename($backupPath, $currentPath);
-
-            return false;
-        }
-
-        // Remove backup
-        @unlink($backupPath);
-
-        return true;
     }
 
     private function handleCheckResult(string $currentVersion, string $latestVersion, bool $isUpToDate): int
