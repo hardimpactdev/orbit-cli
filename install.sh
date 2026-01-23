@@ -13,6 +13,7 @@ PHP_VERSION="8.4"
 if [[ -t 1 ]]; then
     Red='\033[0;31m'
     Green='\033[0;32m'
+    LimeGreen='\033[38;5;118m'
     Yellow='\033[0;33m'
     Dim='\033[0;2m'
     Bold='\033[1m'
@@ -20,11 +21,26 @@ if [[ -t 1 ]]; then
 else
     Red=''
     Green=''
+    LimeGreen=''
     Yellow=''
     Dim=''
     Bold=''
     Reset=''
 fi
+
+# ASCII art logo
+show_logo() {
+    echo ""
+    echo -e "${LimeGreen}"
+    cat << 'EOF'
+   ____       __    _ __ 
+  / __ \_____/ /_  (_) /_
+ / / / / ___/ __ \/ / __/
+/ /_/ / /  / /_/ / / /_  
+\____/_/  /_.___/_/\__/  
+EOF
+    echo -e "${Reset}"
+}
 
 # Spinner characters - use fancy if terminal supports Unicode, fallback to ASCII
 if [[ "${TERM_PROGRAM:-}" == "Apple_Terminal" ]] || [[ "${LANG:-}" != *"UTF-8"* && "${LC_ALL:-}" != *"UTF-8"* ]]; then
@@ -270,9 +286,7 @@ run_orbit_install() {
 # Main
 # ============================================================================
 main() {
-    echo ""
-    echo -e "${Bold}Orbit Installer${Reset}"
-    echo ""
+    show_logo
     
     case "$platform" in
         Darwin)
