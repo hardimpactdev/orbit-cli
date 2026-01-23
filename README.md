@@ -8,7 +8,7 @@ A local PHP development environment powered by Docker. Orbit provides a simple, 
 - **Automatic HTTPS** - Local SSL certificates via Caddy
 - **Essential Services** - PostgreSQL, Redis, and Mailpit included
 - **Simple DNS** - Automatic `.test` domain resolution
-- **Per-site PHP** - Configure PHP version per project
+- **Per-project PHP** - Configure PHP version per project
 
 ## Installation
 
@@ -76,8 +76,8 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit stop` | Stop all Orbit services |
 | `orbit restart` | Restart all Orbit services |
 | `orbit status` | Show status and running services |
-| `orbit sites` | List all sites with their PHP versions |
-| `orbit php <site> <version>` | Set PHP version for a site (8.3, 8.4, 8.5) |
+| `orbit projects` | List all projects with their PHP versions |
+| `orbit php <project> <version>` | Set PHP version for a project (8.3, 8.4, 8.5) |
 | `orbit logs` | Tail container logs |
 | `orbit trust` | Install Caddy root CA for local HTTPS |
 | `orbit caddy:reload` | Regenerate Caddyfile and reload Caddy |
@@ -86,9 +86,9 @@ Once installed, it will be available at `https://orbit.test` (or your configured
 | `orbit upgrade --check` | Check for available updates |
 | `orbit worktrees` | List all git worktrees |
 | `orbit worktree:refresh` | Auto-detect and link new worktrees |
-| `orbit worktree:unlink <site> <wt>` | Remove worktree routing |
-| `orbit site:create <name>` | Create site (runs synchronously with real-time output) |
-| `orbit site:delete <slug>` | Delete site with cascade |
+| `orbit worktree:unlink <project> <wt>` | Remove worktree routing |
+| `orbit project:create <name>` | Create project (runs synchronously with real-time output) |
+| `orbit project:delete <slug>` | Delete project with cascade |
 | `orbit project:list` | List all projects in scan paths |
 | `orbit project:scan` | Scan for git repositories |
 | `orbit project:update [path]` | Update project (git pull + deps) |
@@ -122,17 +122,17 @@ Add to your MCP configuration:
 | `orbit_start` | Start all Docker services |
 | `orbit_stop` | Stop all Docker services |
 | `orbit_restart` | Restart all Docker services |
-| `orbit_sites` | List all registered sites |
-| `orbit_php` | Get/set PHP version for a site |
-| `orbit_site_create` | Create a new site |
-| `orbit_site_delete` | Delete a site |
+| `orbit_projects` | List all registered projects |
+| `orbit_php` | Get/set PHP version for a project |
+| `orbit_project_create` | Create a new project |
+| `orbit_project_delete` | Delete a project |
 | `orbit_logs` | Get container logs |
 | `orbit_worktrees` | List git worktrees |
 
 ### Resources
 
 - `orbit://config` - Current Orbit configuration
-- `orbit://sites` - All registered sites
+- `orbit://projects` - All registered projects
 - `orbit://infrastructure` - Service status and health
 - `orbit://env-template/{type}` - Environment variable templates
 
@@ -226,15 +226,15 @@ Add directories to scan for projects:
 }
 ```
 
-### Custom Site Paths
+### Custom Project Paths
 
-Override the auto-detected path for any site. Useful for nested projects:
+Override the auto-detected path for any project. Useful for nested projects:
 
 ```json
 {
-  "sites": {
-    "mysite": {
-      "path": "~/projects/monorepo/apps/mysite"
+  "projects": {
+    "myproject": {
+      "path": "~/projects/monorepo/apps/myproject"
     }
   }
 }
@@ -275,7 +275,7 @@ orbit worktree:refresh
 # https://feature-auth.myapp.test
 ```
 
-Worktrees are served from `<worktree-name>.<site>.test`.
+Worktrees are served from `<worktree-name>.<project>.test`.
 
 ## Requirements
 

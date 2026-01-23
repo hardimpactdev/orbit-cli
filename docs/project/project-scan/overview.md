@@ -1,11 +1,11 @@
-# site:scan overview
+# project:scan overview
 
-Scans configured paths (or a specific path) to find git repositories and reports them as sites.
+Scans configured paths (or a specific path) to find git repositories and reports them as projects.
 
 - Builds a list of paths from the CLI argument or config paths.
 - Recursively scans directories to a configurable depth.
 - Detects git repositories by presence of a .git directory.
-- Extracts site metadata (name, path, GitHub URL, project type).
+- Extracts project metadata (name, path, GitHub URL, project type).
 - Sorts results alphabetically before output.
 
 Failure and recovery paths

@@ -1,4 +1,4 @@
-# Site-Create Refactor Plan
+# Project-Create Refactor Plan
 
 DTO-based architecture aligned with orbit-cli AGENTS.md conventions.
 
@@ -6,11 +6,11 @@ DTO-based architecture aligned with orbit-cli AGENTS.md conventions.
 
 | Issue | Location | Impact |
 |-------|----------|--------|
-| Command building duplicated | `orbit-core/CreateSiteJob.php` + `SiteCliService.php` | Two sources of truth |
-| GitHub username fetched multiple times | `SiteCreateCommand`, `ForkRepository` | Redundant API calls |
+| Command building duplicated | `orbit-core/CreateProjectJob.php` + `ProjectCliService.php` | Two sources of truth |
+| GitHub username fetched multiple times | `ProjectCreateCommand`, `ForkRepository` | Redundant API calls |
 | ProvisionContext not readonly | `app/Data/Provision/ProvisionContext.php` | Should be immutable |
-| Context reconstructed for 2 fields | `SiteCreateCommand:295-312` | Maintenance burden |
-| Flow logic in scattered conditionals | `SiteCreateCommand::handle()` | Hard to follow |
+| Context reconstructed for 2 fields | `ProjectCreateCommand:295-312` | Maintenance burden |
+| Flow logic in scattered conditionals | `ProjectCreateCommand::handle()` | Hard to follow |
 | Propagation sleep duplicated | `ForkRepository`, `CreateGitHubRepository` | Magic number in 2 places |
 
 ## Architecture Rules (from AGENTS.md)
@@ -37,7 +37,7 @@ DTO-based architecture aligned with orbit-cli AGENTS.md conventions.
 ```
 app/Data/
 ├── Provision/
-│   ├── SiteCreateData.php      # NEW: readonly DTO for API/CLI input
+│   ├── ProjectCreateData.php   # NEW: readonly DTO for API/CLI input
 │   ├── ProvisionContext.php    # UPDATED: make readonly, keep utility methods
 │   ├── StepResult.php          # Keep as-is
 │   └── RepoIntent.php          # NEW: enum for flow type
@@ -67,7 +67,7 @@ app/Actions/Provision/          # FLAT structure (no subdirectories)
 
 ## New DTOs
 
-### SiteCreateData
+### ProjectCreateData
 
 Input DTO for API/CLI layer. Converted to `ProvisionContext` before running actions.
 
@@ -78,7 +78,7 @@ declare(strict_types=1);
 
 namespace App\Data\Provision;
 
-final readonly class SiteCreateData
+final readonly class ProjectCreateData
 {
     public function __construct(
         public string $name,
@@ -262,7 +262,7 @@ final readonly class ProvisionContext
 
     /**
      * Create new context with updated GitHub repo info.
-     * Replaces manual reconstruction in SiteCreateCommand.
+     * Replaces manual reconstruction in ProjectCreateCommand.
      */
     public function withRepoInfo(?string $githubRepo, ?string $cloneUrl): self
     {
@@ -426,7 +426,7 @@ final class ProvisionPipeline
 ### Phase 1: Add New Code (No Breaking Changes)
 
 1. Create `app/Data/Provision/RepoIntent.php`
-2. Create `app/Data/Provision/SiteCreateData.php`
+2. Create `app/Data/Provision/ProjectCreateData.php`
 3. Create `app/Services/GitHubService.php`
 4. Create `app/Services/ProvisionPipeline.php`
 5. Add `withRepoInfo()` method to `ProvisionContext`
@@ -436,16 +436,16 @@ final class ProvisionPipeline
 6. Make `ProvisionContext` readonly
 7. Update `ForkRepository` to use `GitHubService`
 8. Update `CreateGitHubRepository` to use `GitHubService`
-9. Update `SiteCreateCommand` to use:
-   - `SiteCreateData` for input parsing
+9. Update `ProjectCreateCommand` to use:
+   - `ProjectCreateData` for input parsing
    - `RepoIntent` for flow selection
    - `ProvisionPipeline` for running tasks
    - `withRepoInfo()` instead of context reconstruction
 
 ### Phase 3: Update orbit-core
 
-10. Update `CreateSiteJob` to use `SiteCreateData::fromApiPayload()`
-11. Update `SiteCliService` to use `SiteCreateData::fromApiPayload()`
+10. Update `CreateProjectJob` to use `ProjectCreateData::fromApiPayload()`
+11. Update `ProjectCliService` to use `ProjectCreateData::fromApiPayload()`
 12. Remove duplicate command building logic
 
 ### Phase 4: Tests & Cleanup
@@ -458,7 +458,7 @@ final class ProvisionPipeline
 
 | Before | After |
 |--------|-------|
-| Command building duplicated in orbit-core | `SiteCreateData::fromApiPayload()` single source |
+| Command building duplicated in orbit-core | `ProjectCreateData::fromApiPayload()` single source |
 | GitHub username fetched 2-3 times | `GitHubService` caches it |
 | Flow logic in scattered conditionals | `RepoIntent` enum determines flow once |
 | Context reconstructed with 15 fields | `withRepoInfo()` method |

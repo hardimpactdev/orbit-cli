@@ -1,8 +1,8 @@
-# site:update overview
+# project:update overview
 
-Updates an existing site by pulling latest code, installing dependencies, building assets, running migrations, and refreshing Caddy.
+Updates an existing project by pulling latest code, installing dependencies, building assets, running migrations, and refreshing Caddy.
 
-- Resolves the site path from an explicit path or --site name, prompting if interactive.
+- Resolves the project path from an explicit path or --project name, prompting if interactive.
 - Validates directory existence and git repository presence.
 - Optionally runs git pull unless --no-git is set.
 - Installs Composer dependencies when composer.json exists and --no-deps is not set.
@@ -20,7 +20,7 @@ Failure and recovery paths
 
 Inputs and options
 
-- path (optional) or --site name
+- path (optional) or --project name
 - --no-git, --no-deps, --no-migrate, --json
 
 Key integrations
