@@ -39,9 +39,15 @@ jobs:
       - name: Install orbit-web dependencies and build
         run: |
           cd orbit-web
-          composer install --no-dev --optimize-autoloader
-          CI=1 bun ci
+          # Install without scripts to avoid premature asset publishing
+          composer install --no-dev --optimize-autoloader --no-scripts
+          php artisan package:discover --ansi
+          # Build frontend assets in orbit-core
+          cd vendor/hardimpactdev/orbit-core
+          CI=1 bun install
           bun run build
+          cd ../../..
+          # Now publish the built assets
           php artisan vendor:publish --tag=orbit-assets --force
           # Remove dev files before bundling
           rm -rf node_modules .git tests
