@@ -114,10 +114,7 @@ arch=$(uname -m)
 install_macos() {
     # 1. Install Homebrew if missing
     if ! command -v brew >/dev/null; then
-        printf "${Dim}○${Reset} Installing Homebrew...\n"
-        # Homebrew installer is interactive, can't fully suppress
-        NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" >> "$ORBIT_LOG_FILE" 2>&1 || error "Failed to install Homebrew"
-        success "Installing Homebrew"
+        spin "Installing Homebrew (this may take a while)" "NONINTERACTIVE=1 /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
         
         # Add Homebrew to PATH for this session
         if [[ -f /opt/homebrew/bin/brew ]]; then
