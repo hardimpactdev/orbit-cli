@@ -7,7 +7,7 @@ set -euo pipefail
 ORBIT_REPO="hardimpactdev/orbit-cli"
 ORBIT_INSTALL_DIR="${ORBIT_INSTALL:-$HOME/.local/bin}"
 ORBIT_LOG_FILE="${TMPDIR:-/tmp}/orbit-install.log"
-PHP_VERSION="8.4"
+PHP_VERSIONS="${PHP_VERSIONS:-8.4 8.5}"
 
 # Colors (only if terminal supports it)
 if [[ -t 1 ]]; then
@@ -126,13 +126,25 @@ install_macos() {
         success "Homebrew already installed"
     fi
     
-    # 2. Install PHP via shivammathur/php tap
-    if ! command -v php >/dev/null || ! php -r "exit(version_compare(PHP_VERSION, '8.4', '>=') ? 0 : 1);" 2>/dev/null; then
-        spin "Adding PHP tap" "brew tap shivammathur/php"
-        spin "Installing PHP $PHP_VERSION" "brew install shivammathur/php/php@$PHP_VERSION"
-        spin "Linking PHP $PHP_VERSION" "brew link --overwrite --force php@$PHP_VERSION"
-    else
-        success "PHP $(php -r 'echo PHP_VERSION;') already installed"
+    # 2. Install PHP versions via shivammathur/php tap
+    spin "Adding PHP tap" "brew tap shivammathur/php"
+    
+    local first_version=""
+    for version in $PHP_VERSIONS; do
+        if brew list "php@$version" &>/dev/null; then
+            success "PHP $version already installed"
+        else
+            spin "Installing PHP $version" "brew install shivammathur/php/php@$version"
+        fi
+        # Track first version to link as default
+        if [[ -z "$first_version" ]]; then
+            first_version="$version"
+        fi
+    done
+    
+    # Link first version as default CLI
+    if [[ -n "$first_version" ]]; then
+        spin "Linking PHP $first_version as default" "brew link --overwrite --force php@$first_version"
     fi
     
     # 3. Install Composer if missing
@@ -171,15 +183,25 @@ install_linux() {
         spin "Adding PHP repository" "sudo add-apt-repository -y ppa:ondrej/php"
     fi
     
-    # 2. Install PHP if missing or wrong version
-    if ! command -v php >/dev/null || ! php -r "exit(version_compare(PHP_VERSION, '8.4', '>=') ? 0 : 1);" 2>/dev/null; then
-        spin "Updating package lists" "sudo apt-get update -qq"
-        spin "Installing PHP $PHP_VERSION" "sudo apt-get install -y php$PHP_VERSION-cli php$PHP_VERSION-common php$PHP_VERSION-curl php$PHP_VERSION-zip php$PHP_VERSION-mbstring php$PHP_VERSION-xml php$PHP_VERSION-bcmath"
-        
-        # Set as default PHP (don't fail if this doesn't work)
-        sudo update-alternatives --set php "/usr/bin/php$PHP_VERSION" >> "$ORBIT_LOG_FILE" 2>&1 || true
-    else
-        success "PHP $(php -r 'echo PHP_VERSION;') already installed"
+    # 2. Install PHP versions
+    spin "Updating package lists" "sudo apt-get update -qq"
+    
+    local first_version=""
+    for version in $PHP_VERSIONS; do
+        if dpkg -l "php$version-cli" &>/dev/null; then
+            success "PHP $version already installed"
+        else
+            spin "Installing PHP $version" "sudo apt-get install -y php$version-cli php$version-common php$version-curl php$version-zip php$version-mbstring php$version-xml php$version-bcmath php$version-fpm"
+        fi
+        # Track first version to set as default
+        if [[ -z "$first_version" ]]; then
+            first_version="$version"
+        fi
+    done
+    
+    # Set first version as default CLI
+    if [[ -n "$first_version" ]]; then
+        sudo update-alternatives --set php "/usr/bin/php$first_version" >> "$ORBIT_LOG_FILE" 2>&1 || true
     fi
     
     # 3. Install Composer if missing

@@ -32,28 +32,47 @@ final readonly class InstallOrbStack
             return StepResult::success();
         }
 
-        // Install OrbStack
-        $logger->step('Installing OrbStack...');
-        $result = Process::timeout(300)->run('brew install --cask orbstack');
+        // Check if OrbStack is installed but not running
+        $isInstalled = is_dir('/Applications/OrbStack.app');
 
-        if (! $result->successful()) {
-            return StepResult::failed('Failed to install OrbStack: '.$result->errorOutput());
+        if (! $isInstalled) {
+            // Install OrbStack via Homebrew
+            $logger->step('Installing OrbStack via Homebrew...');
+            $result = Process::timeout(600)->run('brew install --cask orbstack');
+
+            if (! $result->successful()) {
+                return StepResult::failed('Failed to install OrbStack: '.$result->errorOutput());
+            }
         }
 
         // Open OrbStack to complete setup
+        $logger->step('Starting OrbStack...');
         Process::run('open -a OrbStack');
-        $logger->step('Waiting for OrbStack initialization...');
 
-        // Poll for readiness
-        for ($i = 0; $i < 12; $i++) {
+        $logger->info('Waiting for OrbStack to initialize (this may take a moment on first run)...');
+
+        // Poll for readiness with longer timeout for first-time setup
+        $maxAttempts = 24; // 2 minutes total
+        for ($i = 0; $i < $maxAttempts; $i++) {
             sleep(5);
             if ($this->platformService->hasDocker()) { // @phpstan-ignore if.alwaysFalse
                 $logger->success('OrbStack ready');
 
                 return StepResult::success();
             }
+
+            // Show progress every 30 seconds
+            if ($i > 0 && $i % 6 === 0) {
+                $elapsed = ($i + 1) * 5;
+                $logger->info("Still waiting... ({$elapsed}s)");
+            }
         }
 
-        return StepResult::failed('OrbStack not ready after 60 seconds');
+        // If we get here, OrbStack didn't initialize in time
+        $logger->warn('OrbStack is installed but may need manual setup.');
+        $logger->info('Please open OrbStack from your Applications folder and complete the setup.');
+        $logger->info('Then run: orbit install');
+
+        return StepResult::failed('OrbStack not ready after 2 minutes. Please complete OrbStack setup manually and re-run orbit install.');
     }
 }
