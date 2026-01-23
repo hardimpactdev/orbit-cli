@@ -26,8 +26,8 @@ else
     Reset=''
 fi
 
-# Spinner characters
-SPINNER='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+# Spinner characters (ASCII for maximum compatibility)
+SPINNER='|/-\'
 
 error() {
     printf "\r\033[K${Red}error${Reset}: %s\n" "$*" >&2
