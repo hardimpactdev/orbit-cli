@@ -249,20 +249,18 @@ class UpgradeCommand extends Command
 
     private function downloadFile(string $url, string $destination): bool
     {
-        $context = stream_context_create([
-            'http' => [
-                'header' => "User-Agent: orbit-cli\r\n",
-                'timeout' => 120,
-                'follow_location' => true,
-            ],
-        ]);
+        // Use curl to stream directly to file (avoids memory exhaustion with large PHARs)
+        $command = sprintf(
+            'curl -fSL --max-time 300 -o %s %s 2>/dev/null',
+            escapeshellarg($destination),
+            escapeshellarg($url)
+        );
 
-        $content = @file_get_contents($url, false, $context);
-        if ($content === false) {
-            return false;
-        }
+        $result = null;
+        $output = null;
+        exec($command, $output, $result);
 
-        return file_put_contents($destination, $content) !== false;
+        return $result === 0 && file_exists($destination) && filesize($destination) > 0;
     }
 
     private function isValidPhar(string $path): bool

@@ -51,6 +51,8 @@ git push origin v0.x.y                         # Push tag (triggers build)
 orbit upgrade                                  # Update local installation
 ```
 
+**Note:** Use `v` prefix for git tags (convention), but omit it in composer.json versions.
+
 ## Technology Stack
 
 | Layer | Technology |
