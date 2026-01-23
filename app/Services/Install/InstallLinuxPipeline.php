@@ -18,9 +18,9 @@ final readonly class InstallLinuxPipeline
     {
         return [
             // Phase 1: System Dependencies (Linux-specific)
+            // Note: PHP is installed by bootstrap installer (install.sh)
             ['action' => Linux\CheckPrerequisites::class, 'name' => 'Checking prerequisites'],
             ['action' => Linux\InstallDocker::class, 'name' => 'Installing Docker'],
-            ['action' => Linux\InstallPhp::class, 'name' => 'Installing PHP'],
             ['action' => Linux\ConfigurePhpFpm::class, 'name' => 'Configuring PHP-FPM'],
             ['action' => Linux\InstallCaddy::class, 'name' => 'Installing Caddy'],
             ['action' => Linux\InstallSupportTools::class, 'name' => 'Installing support tools'],

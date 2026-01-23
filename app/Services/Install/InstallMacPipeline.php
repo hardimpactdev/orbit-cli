@@ -18,10 +18,9 @@ final readonly class InstallMacPipeline
     {
         return [
             // Phase 1: System Dependencies (Mac-specific)
+            // Note: PHP and Homebrew are installed by bootstrap installer (install.sh)
             ['action' => Mac\CheckPrerequisites::class, 'name' => 'Checking prerequisites'],
-            ['action' => Mac\InstallHomebrew::class, 'name' => 'Checking Homebrew'],
             ['action' => Mac\InstallOrbStack::class, 'name' => 'Installing OrbStack'],
-            ['action' => Mac\InstallPhp::class, 'name' => 'Installing PHP'],
             ['action' => Mac\ConfigurePhpFpm::class, 'name' => 'Configuring PHP-FPM'],
             ['action' => Mac\InstallCaddy::class, 'name' => 'Installing Caddy'],
             ['action' => Mac\InstallSupportTools::class, 'name' => 'Installing support tools'],

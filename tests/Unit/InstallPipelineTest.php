@@ -11,7 +11,8 @@ describe('InstallLinuxPipeline', function () {
         $pipeline = new InstallLinuxPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps)->toHaveCount(21);
+        // PHP installation moved to bootstrap installer (install.sh)
+        expect($steps)->toHaveCount(20);
     });
 
     it('starts with prerequisites check', function () {
@@ -54,7 +55,8 @@ describe('InstallMacPipeline', function () {
         $pipeline = new InstallMacPipeline;
         $steps = $pipeline->steps();
 
-        expect($steps)->toHaveCount(22);
+        // PHP and Homebrew installation moved to bootstrap installer (install.sh)
+        expect($steps)->toHaveCount(20);
     });
 
     it('starts with prerequisites check', function () {
@@ -64,11 +66,13 @@ describe('InstallMacPipeline', function () {
         expect($steps[0]['action'])->toBe(Mac\CheckPrerequisites::class);
     });
 
-    it('includes Homebrew check for macOS', function () {
+    it('does not include Homebrew or PHP installation (moved to bootstrap)', function () {
         $pipeline = new InstallMacPipeline;
         $actions = collect($pipeline->steps())->pluck('action');
 
-        expect($actions)->toContain(Mac\InstallHomebrew::class);
+        // These are now handled by install.sh bootstrap script
+        expect($actions)->not->toContain(Mac\InstallHomebrew::class);
+        expect($actions)->not->toContain(Mac\InstallPhp::class);
     });
 
     it('includes OrbStack for macOS instead of Docker', function () {
