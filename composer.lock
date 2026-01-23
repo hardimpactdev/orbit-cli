@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f906b846a4078bca9c5a92ed893c44ea",
+    "content-hash": "181b3df202e7a2a9b6a7eb2f01b1f2f6",
     "packages": [
         {
             "name": "brick/math",
@@ -1125,16 +1125,16 @@
         },
         {
             "name": "hardimpactdev/orbit-core",
-            "version": "0.0.7",
+            "version": "0.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/hardimpactdev/orbit-core.git",
-                "reference": "5163a9746c1c50b68c3045fc550d681065249970"
+                "reference": "236c7f45df0f55d0fb61126b568125ab0ec21ccd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/5163a9746c1c50b68c3045fc550d681065249970",
-                "reference": "5163a9746c1c50b68c3045fc550d681065249970",
+                "url": "https://api.github.com/repos/hardimpactdev/orbit-core/zipball/236c7f45df0f55d0fb61126b568125ab0ec21ccd",
+                "reference": "236c7f45df0f55d0fb61126b568125ab0ec21ccd",
                 "shasum": ""
             },
             "require": {
@@ -1186,7 +1186,7 @@
             ],
             "support": {
                 "issues": "https://github.com/hardimpactdev/orbit-core/issues",
-                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.7"
+                "source": "https://github.com/hardimpactdev/orbit-core/tree/0.0.9"
             },
             "funding": [
                 {
@@ -1194,7 +1194,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-01-23T08:56:27+00:00"
+            "time": "2026-01-23T15:53:45+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",
