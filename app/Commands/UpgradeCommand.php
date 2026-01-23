@@ -165,7 +165,7 @@ class UpgradeCommand extends Command
                     $dockerManager->stopAll();
                     $dockerManager->startAll();
                     $this->info('✓ Services restarted');
-                } catch (\Exception $e) {
+                } catch (\Exception) {
                     $this->warn('Failed to restart some services. Run `orbit restart` to try again.');
                 }
 

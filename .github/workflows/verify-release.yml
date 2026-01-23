@@ -12,6 +12,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Wait for build workflow to complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=${{ github.event.release.tag_name }}
+          echo "Waiting for build workflow to upload assets for ${TAG_NAME}..."
+          
+          # Wait up to 5 minutes (30 attempts x 10 seconds) for assets to appear
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS}: Checking for orbit.phar..."
+            
+            RELEASE_JSON=$(gh api repos/${{ github.repository }}/releases/tags/${TAG_NAME} 2>/dev/null || echo '{}')
+            PHAR_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name=="orbit.phar") | .browser_download_url' 2>/dev/null || echo "")
+            
+            if [ -n "$PHAR_URL" ] && [ "$PHAR_URL" != "null" ]; then
+              echo "Found orbit.phar asset!"
+              break
+            fi
+            
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "Asset not yet available. Waiting 10 seconds..."
+              sleep 10
+            fi
+          done
+
       - name: Verify release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

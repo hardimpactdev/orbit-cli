@@ -51,7 +51,7 @@ final class ReverbBroadcaster
 
         try {
             $this->pusher->trigger($channel, $event, $data);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             // Silently fail - broadcasting is non-critical for CLI operations
         }
     }
