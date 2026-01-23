@@ -2,8 +2,10 @@
 
 namespace App\Commands;
 
+use App\Actions\Upgrade\UpdateWebApp;
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
+use App\Services\DockerManager;
 use LaravelZero\Framework\Commands\Command;
 
 class UpgradeCommand extends Command
@@ -142,18 +144,43 @@ class UpgradeCommand extends Command
                 exec(sprintf('setsid %s > /dev/null 2>&1 < /dev/null &', escapeshellarg($upgradeScript)));
             }
 
+            // After upgrade, update web app and restart services
+            if (! $this->wantsJson()) {
+                $this->info("Successfully upgraded to {$latestVersion}!");
+                $this->newLine();
+
+                // Update companion web app
+                $this->info('Updating companion web app...');
+                $updateWebApp = app(UpdateWebApp::class);
+                if (! $updateWebApp->handle()) {
+                    $this->warn('Failed to update web app. You may need to run `orbit install` manually.');
+                } else {
+                    $this->info('✓ Web app updated');
+                }
+
+                // Restart services
+                $this->info('Restarting services...');
+                try {
+                    $dockerManager = app(DockerManager::class);
+                    $dockerManager->stopAll();
+                    $dockerManager->startAll();
+                    $this->info('✓ Services restarted');
+                } catch (\Exception $e) {
+                    $this->warn('Failed to restart some services. Run `orbit restart` to try again.');
+                }
+
+                $this->newLine();
+                $this->info('Upgrade complete!');
+            }
+
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
                     'action' => 'upgrade',
                     'previous_version' => $currentVersion,
                     'new_version' => $latestVersion,
                     'upgraded' => true,
-                    'message' => 'Run `orbit init` to update the companion web app.',
                 ]);
             }
-
-            $this->info("Successfully upgraded to {$latestVersion}!");
-            $this->info('Run `orbit init` to update the companion web app.');
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
