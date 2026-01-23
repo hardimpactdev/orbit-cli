@@ -23,8 +23,9 @@ jobs:
 
           RELEASE_JSON=$(gh api repos/${{ github.repository }}/releases/${RELEASE_ID})
 
-          if [[ ! "$TAG_NAME" =~ ^v ]]; then
-            echo "::error::Release tag must start with 'v' (e.g. v0.1.34)."
+          # Accept both v-prefixed (v0.1.38) and plain semver (0.1.38) tags
+          if [[ ! "$TAG_NAME" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Release tag must be a valid semver (e.g. v0.1.34 or 0.1.34)."
             gh api repos/${{ github.repository }}/releases/${RELEASE_ID} -X PATCH -f draft=true
             exit 1
           fi
