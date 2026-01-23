@@ -238,6 +238,46 @@ class MacAdapter implements PlatformAdapter
     }
 
     /**
+     * Set the default PHP CLI version using brew link.
+     */
+    public function setDefaultPhpCli(string $version): bool
+    {
+        $normalizedVersion = $this->normalizePhpVersion($version);
+        $formula = $this->getBrewPhpFormula($normalizedVersion);
+
+        // First unlink all PHP versions, then link the requested one
+        Process::run('brew unlink php 2>/dev/null');
+        foreach (['8.3', '8.4', '8.5'] as $v) {
+            if ($v !== $normalizedVersion) {
+                Process::run("brew unlink php@{$v} 2>/dev/null");
+            }
+        }
+
+        $result = Process::run("brew link --force --overwrite {$formula}");
+
+        return $result->successful();
+    }
+
+    /**
+     * Get the current default PHP CLI version.
+     */
+    public function getDefaultPhpCli(): ?string
+    {
+        $result = Process::run('php --version 2>/dev/null | head -1');
+
+        if (! $result->successful()) {
+            return null;
+        }
+
+        // Parse "PHP 8.4.3 (cli) ..." to extract "8.4"
+        if (preg_match('/PHP (\d+\.\d+)/', $result->output(), $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
      * Normalize PHP version string.
      * Converts "8.4", "php8.4", "84" → "8.4"
      */

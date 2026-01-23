@@ -258,6 +258,38 @@ class LinuxAdapter implements PlatformAdapter
     }
 
     /**
+     * Set the default PHP CLI version using update-alternatives.
+     */
+    public function setDefaultPhpCli(string $version): bool
+    {
+        $normalizedVersion = $this->normalizePhpVersion($version);
+        $binaryPath = $this->getPhpBinaryPath($normalizedVersion);
+
+        $result = Process::run("sudo update-alternatives --set php {$binaryPath}");
+
+        return $result->successful();
+    }
+
+    /**
+     * Get the current default PHP CLI version.
+     */
+    public function getDefaultPhpCli(): ?string
+    {
+        $result = Process::run('php --version 2>/dev/null | head -1');
+
+        if (! $result->successful()) {
+            return null;
+        }
+
+        // Parse "PHP 8.4.3 (cli) ..." to extract "8.4"
+        if (preg_match('/PHP (\d+\.\d+)/', $result->output(), $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
      * Normalize PHP version string.
      * Converts "8.4", "php8.4", "84" → "8.4"
      */

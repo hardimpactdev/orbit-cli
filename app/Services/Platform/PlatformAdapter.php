@@ -110,4 +110,14 @@ interface PlatformAdapter
      * Get home directory path.
      */
     public function getHomePath(): string;
+
+    /**
+     * Set the default PHP CLI version.
+     */
+    public function setDefaultPhpCli(string $version): bool;
+
+    /**
+     * Get the current default PHP CLI version.
+     */
+    public function getDefaultPhpCli(): ?string;
 }
