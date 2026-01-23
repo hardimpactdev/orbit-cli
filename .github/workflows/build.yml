@@ -36,8 +36,11 @@ jobs:
       - name: Install orbit-web dependencies and bundle
         run: |
           cd orbit-web
+          # Remove path repositories so composer uses packagist
+          jq 'del(.repositories)' composer.json > composer.tmp && mv composer.tmp composer.json
+          rm -f composer.lock
           # orbit-core ships with pre-built assets, post-install-cmd publishes them
-          composer install --no-dev --optimize-autoloader
+          composer install --no-dev --optimize-autoloader --prefer-dist
           # Remove dev files before bundling
           rm -rf .git tests
           tar -czf ../orbit-cli/stubs/orbit-web-bundle.tar.gz .
