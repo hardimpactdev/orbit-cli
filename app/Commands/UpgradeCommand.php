@@ -139,26 +139,18 @@ class UpgradeCommand extends Command
                 echo "\033[32mRun `orbit init` to update the companion web app.\033[0m\n";
             }
 
-            // Flush all output buffers to ensure message is displayed
-            while (ob_get_level() > 0) {
-                ob_end_flush();
-            }
-            flush();
-
-            // Use pcntl_exec to replace this process with a simple exit command.
-            // This avoids the ugly "killed" message that shells display when a
-            // process is terminated by SIGKILL. The shell sees a clean exit instead.
-            if (function_exists('pcntl_exec')) {
-                // Replace this process entirely - no PHP shutdown handlers run
-                pcntl_exec('/bin/true');
+            // We need to exit without PHP running destructors/shutdown handlers,
+            // as they may autoload classes from the NEW phar using OLD memory offsets.
+            //
+            // Unregister autoloaders to prevent accidental class loading during shutdown.
+            $autoloaders = spl_autoload_functions();
+            if ($autoloaders) {
+                foreach ($autoloaders as $autoloader) {
+                    spl_autoload_unregister($autoloader);
+                }
             }
 
-            // Fallback: SIGKILL terminates immediately but shells may report "killed"
-            if (function_exists('posix_kill')) {
-                posix_kill(posix_getpid(), 9);
-            }
-
-            // Final fallback for systems without posix extension
+            // Now we can exit cleanly - no autoloading will occur
             exit(0);
         } finally {
             // This should not run if posix_kill worked, but just in case
