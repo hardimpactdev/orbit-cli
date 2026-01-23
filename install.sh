@@ -26,8 +26,12 @@ else
     Reset=''
 fi
 
-# Spinner characters (ASCII for maximum compatibility)
-SPINNER='|/-\'
+# Spinner characters - use fancy if terminal supports Unicode, fallback to ASCII
+if [[ "${TERM_PROGRAM:-}" == "Apple_Terminal" ]] || [[ "${LANG:-}" != *"UTF-8"* && "${LC_ALL:-}" != *"UTF-8"* ]]; then
+    SPINNER='|/-\'
+else
+    SPINNER='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+fi
 
 error() {
     printf "\r\033[K${Red}error${Reset}: %s\n" "$*" >&2
