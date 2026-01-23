@@ -108,15 +108,8 @@ class UpgradeCommand extends Command
             // PHP's shutdown handlers will try to autoload classes from the NEW phar
             // using OLD memory offsets, causing garbage output.
             //
-            // Solution: Spawn a background process to do the replacement AFTER we exit.
-            // This way, our process exits cleanly, THEN the file is replaced.
-
-            $script = sprintf(
-                'sleep 0.5 && mv %s %s && rm -f %s 2>/dev/null',
-                escapeshellarg($tempFile),
-                escapeshellarg($pharPath),
-                escapeshellarg($pharPath.'.bak')
-            );
+            // Solution: Write a self-deleting shell script that replaces the PHAR
+            // after we exit. This avoids "Killed" messages on Linux.
 
             // Make the new file executable before the move
             @chmod($tempFile, 0755);
@@ -124,8 +117,30 @@ class UpgradeCommand extends Command
             // Create backup
             @copy($pharPath, $pharPath.'.bak');
 
-            // Spawn background process to replace the binary after we exit
-            exec(sprintf('nohup sh -c %s > /dev/null 2>&1 &', escapeshellarg($script)));
+            // Create a self-deleting upgrade script
+            $upgradeScript = sys_get_temp_dir().'/orbit-upgrade-'.getmypid().'.sh';
+            $scriptContent = sprintf(
+                "#!/bin/sh\n".
+                "sleep 0.2\n".
+                "mv %s %s\n".
+                "rm -f %s\n".
+                "rm -f \$0\n",  // Self-delete
+                escapeshellarg($tempFile),
+                escapeshellarg($pharPath),
+                escapeshellarg($pharPath.'.bak')
+            );
+
+            file_put_contents($upgradeScript, $scriptContent);
+            chmod($upgradeScript, 0755);
+
+            // Use different approaches for Linux vs macOS
+            if (PHP_OS_FAMILY === 'Darwin') {
+                // macOS: current approach works fine
+                exec(sprintf('nohup %s > /dev/null 2>&1 &', escapeshellarg($upgradeScript)));
+            } else {
+                // Linux: use setsid to fully detach from terminal
+                exec(sprintf('setsid %s > /dev/null 2>&1 < /dev/null &', escapeshellarg($upgradeScript)));
+            }
 
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
