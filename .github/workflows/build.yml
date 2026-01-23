@@ -42,6 +42,7 @@ jobs:
           composer install --no-dev --optimize-autoloader
           CI=1 bun ci
           bun run build
+          php artisan vendor:publish --tag=orbit-assets --force
           # Remove dev files before bundling
           rm -rf node_modules .git tests
           tar -czf ../orbit-cli/stubs/orbit-web-bundle.tar.gz .
