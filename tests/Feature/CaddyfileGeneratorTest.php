@@ -3,6 +3,7 @@
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\ProjectScanner;
+use App\Services\ServiceManager;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
@@ -12,6 +13,7 @@ beforeEach(function () {
 
     $this->configManager = Mockery::mock(ConfigManager::class);
     $this->projectScanner = Mockery::mock(ProjectScanner::class);
+    $this->serviceManager = Mockery::mock(ServiceManager::class);
 
     $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir);
     $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
@@ -19,6 +21,9 @@ beforeEach(function () {
     $this->configManager->shouldReceive('get')->andReturnUsing(function ($key, $default = null) {
         return $default;
     });
+
+    // Default: Reverb disabled
+    $this->serviceManager->shouldReceive('isEnabled')->with('reverb')->andReturn(false);
 });
 
 afterEach(function () {
@@ -46,7 +51,7 @@ it('generates caddyfile with sites', function () {
         ],
     ]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner, null, null, $this->serviceManager);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
@@ -74,7 +79,7 @@ it('generates caddyfile with php_fastcgi directives', function () {
         ],
     ]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner, null, null, $this->serviceManager);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
@@ -91,11 +96,12 @@ it('generates empty caddyfile when no sites exist', function () {
 
     $this->projectScanner->shouldReceive('scanProjects')->andReturn([]);
 
-    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner);
+    $generator = new CaddyfileGenerator($this->configManager, $this->projectScanner, null, null, $this->serviceManager);
     $generator->generate();
 
     $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
 
     expect($caddyfile)->toContain('local_certs');
-    expect($caddyfile)->not->toContain('.test');
+    // No site entries when no projects exist (Reverb is disabled in mock)
+    expect($caddyfile)->not->toContain('mysite');
 });

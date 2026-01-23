@@ -153,6 +153,7 @@ final readonly class InstallWebApp
 
         $appKey = 'base64:'.base64_encode(random_bytes(32));
 
+        // Bundled web app connects directly to local Reverb server
         $env = <<<ENV
 APP_NAME=Orbit
 APP_ENV=production
@@ -184,9 +185,14 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID={$reverbConfig['app_id']}
 REVERB_APP_KEY={$reverbConfig['app_key']}
 REVERB_APP_SECRET={$reverbConfig['app_secret']}
-REVERB_HOST={$reverbConfig['host']}
-REVERB_PORT={$reverbConfig['port']}
-REVERB_SCHEME=https
+REVERB_HOST=127.0.0.1
+REVERB_PORT={$reverbConfig['internal_port']}
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY={$reverbConfig['app_key']}
+VITE_REVERB_HOST=127.0.0.1
+VITE_REVERB_PORT={$reverbConfig['internal_port']}
+VITE_REVERB_SCHEME=http
 ENV;
 
         File::put("{$webAppPath}/.env", $env);
