@@ -45,10 +45,31 @@ final readonly class InstallOrbStack
             }
         }
 
-        // Open OrbStack to complete setup
+        // Start OrbStack via CLI (headless, no GUI needed)
         $logger->step('Starting OrbStack...');
-        Process::run('open -a OrbStack');
 
+        // Use 'orb start' for headless initialization - this handles first-time setup automatically
+        $orbBin = $_SERVER['HOME'].'/.orbstack/bin/orb';
+        if (! file_exists($orbBin)) {
+            $orbBin = '/Applications/OrbStack.app/Contents/MacOS/orb';
+        }
+
+        if (file_exists($orbBin)) {
+            // Start OrbStack in headless mode
+            $result = Process::timeout(120)->run("{$orbBin} start");
+            if ($result->successful()) {
+                // Give it a moment to fully initialize
+                sleep(3);
+                if ($this->platformService->hasDocker()) { // @phpstan-ignore if.alwaysFalse
+                    $logger->success('OrbStack ready');
+
+                    return StepResult::success();
+                }
+            }
+        }
+
+        // Fallback: try opening the GUI app
+        Process::run('open -a OrbStack');
         $logger->info('Waiting for OrbStack to initialize (this may take a moment on first run)...');
 
         // Poll for readiness with longer timeout for first-time setup
