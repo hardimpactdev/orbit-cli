@@ -273,14 +273,14 @@ final readonly class UpdateWebApp
         $tld = $this->configManager->getTld();
 
         // Ensure APP_URL points to orbit.{tld}
-        $envContent = preg_replace(
+        $envContent = (string) preg_replace(
             '/^APP_URL=.*$/m',
             "APP_URL=https://orbit.{$tld}",
             $envContent
         );
 
         // Ensure APP_ENV is production for bundled web app
-        $envContent = preg_replace(
+        $envContent = (string) preg_replace(
             '/^APP_ENV=.*$/m',
             'APP_ENV=production',
             $envContent
@@ -288,14 +288,14 @@ final readonly class UpdateWebApp
 
         // Ensure DB_DATABASE points to the shared database
         $sharedDbPath = $this->getSharedDatabasePath();
-        $envContent = preg_replace(
+        $envContent = (string) preg_replace(
             '/^DB_DATABASE=.*$/m',
             "DB_DATABASE={$sharedDbPath}",
             $envContent
         );
 
         // Ensure BROADCAST_CONNECTION is reverb
-        $envContent = preg_replace(
+        $envContent = (string) preg_replace(
             '/^BROADCAST_CONNECTION=.*$/m',
             'BROADCAST_CONNECTION=reverb',
             $envContent
@@ -304,7 +304,7 @@ final readonly class UpdateWebApp
         // Update ORBIT_CLI_PATH to current CLI path
         $cliPath = $this->getInstalledCliPath();
         if (preg_match('/^ORBIT_CLI_PATH=.*$/m', $envContent)) {
-            $envContent = preg_replace(
+            $envContent = (string) preg_replace(
                 '/^ORBIT_CLI_PATH=.*$/m',
                 "ORBIT_CLI_PATH={$cliPath}",
                 $envContent
