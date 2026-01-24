@@ -147,13 +147,15 @@ final readonly class InstallWebApp
 
     private function generateWebAppEnv(InstallContext $context): void
     {
-        $webAppPath = $this->configManager->getWebAppPath();
+        $configPath = $this->configManager->getConfigPath();
         $tld = $context->tld;
         $reverbConfig = $this->configManager->getReverbConfig();
+        $cliPath = (getenv('HOME') ?: '/home/orbit').'/.local/bin/orbit';
+        $dbPath = "{$configPath}/database.sqlite";
 
         $appKey = 'base64:'.base64_encode(random_bytes(32));
 
-        // Bundled web app connects directly to local Reverb server
+        // Bundled web app uses shared database and connects to Reverb
         $env = <<<ENV
 APP_NAME=Orbit
 APP_ENV=production
@@ -161,12 +163,13 @@ APP_KEY={$appKey}
 APP_DEBUG=true
 APP_URL=https://orbit.{$tld}
 ORBIT_MODE=web
+ORBIT_CLI_PATH={$cliPath}
 
 LOG_CHANNEL=single
 LOG_LEVEL=error
 
 DB_CONNECTION=sqlite
-DB_DATABASE={$webAppPath}/database.sqlite
+DB_DATABASE={$dbPath}
 
 REDIS_CLIENT=phpredis
 REDIS_HOST=orbit-redis
@@ -190,11 +193,11 @@ REVERB_PORT={$reverbConfig['internal_port']}
 REVERB_SCHEME=http
 
 VITE_REVERB_APP_KEY={$reverbConfig['app_key']}
-VITE_REVERB_HOST=127.0.0.1
-VITE_REVERB_PORT={$reverbConfig['internal_port']}
-VITE_REVERB_SCHEME=http
+VITE_REVERB_HOST=reverb.{$tld}
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
 ENV;
 
-        File::put("{$webAppPath}/.env", $env);
+        File::put("{$configPath}/web/.env", $env);
     }
 }
