@@ -18,6 +18,8 @@
         </include>
     </source>
     <php>
-        <env name="LAUNCHPAD_TEST_DB" value="./tests/database/test.sqlite"/>
+        <env name="APP_ENV" value="testing"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
     </php>
 </phpunit>
