@@ -1,0 +1,65 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+define('LARAVEL_START', microtime(true));
+
+require __DIR__.'/NativeCommandNormalizer.php';
+
+setEntrypointEnvironment();
+
+$argv = $_SERVER['argv'] ?? [];
+
+$_SERVER['argv'] = normalizeNativeCommandArgv($argv);
+
+$autoload = __DIR__.'/vendor/autoload.php';
+
+if (! file_exists($autoload)) {
+    fwrite(STDERR, "Orbit CLI dependencies are not installed. Run composer install in apps/cli.\n");
+
+    exit(1);
+}
+
+require $autoload;
+
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+
+$status = $kernel->handle(
+    $input = new Symfony\Component\Console\Input\ArgvInput,
+    new Symfony\Component\Console\Output\ConsoleOutput,
+);
+
+$kernel->terminate($input, $status);
+
+exit($status);
+
+function setEntrypointEnvironment(): void
+{
+    setEntrypointEnvironmentValue('ORBIT_APP', 'cli');
+
+    $hostCwd = getenv('ORBIT_HOST_CWD');
+
+    if (is_string($hostCwd) && trim($hostCwd) !== '') {
+        setEntrypointEnvironmentValue('ORBIT_HOST_CWD', $hostCwd);
+
+        return;
+    }
+
+    $cwd = getcwd();
+
+    if (! is_string($cwd) || trim($cwd) === '') {
+        return;
+    }
+
+    setEntrypointEnvironmentValue('ORBIT_HOST_CWD', $cwd);
+}
+
+function setEntrypointEnvironmentValue(string $key, string $value): void
+{
+    putenv("{$key}={$value}");
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
