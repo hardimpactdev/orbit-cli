@@ -1,0 +1,72 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "hardimpactdev/orbit-cli",
+    "description": "Orbit local CLI and executor application.",
+    "keywords": [
+        "cli",
+        "laravel-zero",
+        "orbit"
+    ],
+    "license": "MIT",
+    "type": "project",
+    "require": {
+        "hardimpactdev/orbit-core": "0.1.192",
+        "hardimpactdev/orbit-sdk-laravel": "0.1.192",
+        "illuminate/http": "^13.0",
+        "laravel-zero/framework": "^13.0",
+        "php": "^8.5"
+    },
+    "require-dev": {
+        "carthage-software/mago": "^1.40.1",
+        "illuminate/validation": "^13.0",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0",
+        "phpacker/phpacker": "^0.6.4",
+        "rector/rector": "^2.3"
+    },
+    "provide": {
+        "laravel/framework": "13.24.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "analyse": "vendor/bin/mago analyze app config --reporting-format=medium",
+        "format": "vendor/bin/mago format",
+        "rector": "vendor/bin/rector process",
+        "test": "vendor/bin/pest --exclude-group=slow --compact",
+        "test:slow": "vendor/bin/pest --compact",
+        "mago:analyze": "vendor/bin/mago analyze app config --reporting-format=medium",
+        "mago:lint": "vendor/bin/mago lint --reporting-format=medium",
+        "mago:format": "vendor/bin/mago format",
+        "mago:format:check": "vendor/bin/mago format --check"
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "rector/rector": true
+        },
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "bin": [
+        "orbit"
+    ],
+    "version": "0.1.192"
+}

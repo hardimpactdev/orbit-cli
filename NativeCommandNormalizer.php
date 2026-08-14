@@ -1,0 +1,414 @@
+<?php
+
+declare(strict_types=1);
+
+const ORBIT_NATIVE_MULTI_TOKEN_COMMANDS = [
+    'instance:analytics disable',
+    'instance:analytics enable',
+    'instance:analytics show',
+    'node role:add',
+    'node role:list',
+    'node role:remove',
+];
+
+/**
+ * Normalize native argv quirks before Symfony binds global options.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeCommandArgv(array $argv): array
+{
+    return normalizeNativeAnalyticsUpdateVersionArgv(
+        normalizeNativeProcessAddVersionArgv(
+            normalizeNativeToolInstallVersionArgv(
+                normalizeNativeVersionCommandArgv(
+                    normalizeNativeMultiTokenCommandArgv($argv),
+                ),
+            ),
+        ),
+    );
+}
+
+/**
+ * Rewrite root `orbit --version` invocations to the first-party version command
+ * so Orbit can render release and install metadata while preserving Symfony's
+ * global version option when an actual command name is present.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeVersionCommandArgv(array $argv): array
+{
+    if (count($argv) < 2 || nativeArgvHasCommandName($argv)) {
+        return $argv;
+    }
+
+    $versionOptionIndex = null;
+
+    foreach (array_slice($argv, 1, null, true) as $index => $argument) {
+        if ($argument === '--') {
+            return $argv;
+        }
+
+        if ($argument === '--version' || $argument === '-V') {
+            $versionOptionIndex = $index;
+
+            break;
+        }
+    }
+
+    if ($versionOptionIndex === null) {
+        return $argv;
+    }
+
+    $rewritten = [$argv[0], 'version'];
+
+    foreach (array_slice($argv, 1) as $index => $argument) {
+        if (($index + 1) === $versionOptionIndex) {
+            continue;
+        }
+
+        $rewritten[] = $argument;
+    }
+
+    return $rewritten;
+}
+
+/**
+ * Convert supported multi-token native command invocations into the single
+ * Symfony command-name argument expected by Laravel Zero.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeMultiTokenCommandArgv(array $argv): array
+{
+    if ($argv === []) {
+        return [];
+    }
+
+    $command = nativeMultiTokenCommandNameFromArgv($argv);
+
+    if ($command === null) {
+        return $argv;
+    }
+
+    $commandTokenCount = substr_count($command, ' ') + 1;
+    $rewritten = [$argv[0]];
+    $commandInserted = false;
+    $remainingCommandTokens = $commandTokenCount;
+    $afterEndOfOptions = false;
+
+    foreach (array_slice($argv, 1) as $argument) {
+        if ($argument === '--') {
+            $rewritten[] = $argument;
+            $afterEndOfOptions = true;
+
+            continue;
+        }
+
+        if ($afterEndOfOptions) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($argument === '' || str_starts_with($argument, '-')) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if (! $commandInserted) {
+            $rewritten[] = $command;
+            $commandInserted = true;
+            $remainingCommandTokens--;
+
+            continue;
+        }
+
+        if ($remainingCommandTokens > 0) {
+            $remainingCommandTokens--;
+
+            continue;
+        }
+
+        $rewritten[] = $argument;
+    }
+
+    return $rewritten;
+}
+
+/**
+ * Rewrite the public `tool:install --version=<version>` contract to an
+ * internal option name because Symfony reserves `--version` globally.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeToolInstallVersionArgv(array $argv): array
+{
+    if ($argv === []) {
+        return [];
+    }
+
+    $rewritten = [];
+    $insideToolInstall = false;
+    $afterEndOfOptions = false;
+    $count = count($argv);
+
+    for ($index = 0; $index < $count; $index++) {
+        $argument = $argv[$index];
+
+        if ($index === 0) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($afterEndOfOptions) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($argument === '--') {
+            $rewritten[] = $argument;
+            $afterEndOfOptions = true;
+
+            continue;
+        }
+
+        if (! $insideToolInstall && $argument !== '' && ! str_starts_with($argument, '-')) {
+            $insideToolInstall = $argument === 'tool:install';
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($insideToolInstall && str_starts_with($argument, '--version=')) {
+            $rewritten[] = '--tool-version='.substr($argument, strlen('--version='));
+
+            continue;
+        }
+
+        if (
+            $insideToolInstall
+            && $argument === '--version'
+            && ($index + 1) < $count
+            && ! str_starts_with($argv[$index + 1], '-')
+        ) {
+            $rewritten[] = '--tool-version='.$argv[$index + 1];
+            $index++;
+
+            continue;
+        }
+
+        $rewritten[] = $argument;
+    }
+
+    return $rewritten;
+}
+
+/**
+ * Rewrite the public `process:add --version=<version>` contract to an
+ * internal option name because Symfony reserves `--version` globally.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeProcessAddVersionArgv(array $argv): array
+{
+    if ($argv === []) {
+        return [];
+    }
+
+    $rewritten = [];
+    $insideProcessAdd = false;
+    $afterEndOfOptions = false;
+    $count = count($argv);
+
+    for ($index = 0; $index < $count; $index++) {
+        $argument = $argv[$index];
+
+        if ($index === 0) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($afterEndOfOptions) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($argument === '--') {
+            $rewritten[] = $argument;
+            $afterEndOfOptions = true;
+
+            continue;
+        }
+
+        if ($argument === 'process:add') {
+            $insideProcessAdd = true;
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if (! $insideProcessAdd && $argument !== '' && ! str_starts_with($argument, '-')) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($insideProcessAdd && str_starts_with($argument, '--version=')) {
+            $rewritten[] = '--service-version='.substr($argument, strlen('--version='));
+
+            continue;
+        }
+
+        if (
+            $insideProcessAdd
+            && $argument === '--version'
+            && ($index + 1) < $count
+            && ! str_starts_with($argv[$index + 1], '-')
+        ) {
+            $rewritten[] = '--service-version='.$argv[$index + 1];
+            $index++;
+
+            continue;
+        }
+
+        $rewritten[] = $argument;
+    }
+
+    return $rewritten;
+}
+
+/**
+ * Rewrite the public `analytics:update --version=<version>` contract to an
+ * internal option name because Symfony reserves `--version` globally.
+ *
+ * @param  list<string>  $argv
+ * @return list<string>
+ */
+function normalizeNativeAnalyticsUpdateVersionArgv(array $argv): array
+{
+    if ($argv === []) {
+        return [];
+    }
+
+    $rewritten = [];
+    $insideAnalyticsUpdate = false;
+    $afterEndOfOptions = false;
+    $count = count($argv);
+
+    for ($index = 0; $index < $count; $index++) {
+        $argument = $argv[$index];
+
+        if ($index === 0) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($afterEndOfOptions) {
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($argument === '--') {
+            $rewritten[] = $argument;
+            $afterEndOfOptions = true;
+
+            continue;
+        }
+
+        if (! $insideAnalyticsUpdate && $argument !== '' && ! str_starts_with($argument, '-')) {
+            $insideAnalyticsUpdate = $argument === 'analytics:update';
+            $rewritten[] = $argument;
+
+            continue;
+        }
+
+        if ($insideAnalyticsUpdate && str_starts_with($argument, '--version=')) {
+            $rewritten[] = '--requested-version='.substr($argument, strlen('--version='));
+
+            continue;
+        }
+
+        if (
+            $insideAnalyticsUpdate
+            && $argument === '--version'
+            && ($index + 1) < $count
+            && ! str_starts_with($argv[$index + 1], '-')
+        ) {
+            $rewritten[] = '--requested-version='.$argv[$index + 1];
+            $index++;
+
+            continue;
+        }
+
+        $rewritten[] = $argument;
+    }
+
+    return $rewritten;
+}
+
+/**
+ * @param  list<string>  $argv
+ */
+function nativeMultiTokenCommandNameFromArgv(array $argv): ?string
+{
+    $arguments = [];
+
+    foreach (array_slice($argv, 1) as $argument) {
+        if ($argument === '--') {
+            break;
+        }
+
+        if ($argument === '' || str_starts_with($argument, '-')) {
+            continue;
+        }
+
+        $arguments[] = $argument;
+    }
+
+    if ($arguments === []) {
+        return null;
+    }
+
+    for ($length = count($arguments); $length >= 2; $length--) {
+        $candidate = implode(' ', array_slice($arguments, 0, $length));
+
+        if (in_array($candidate, ORBIT_NATIVE_MULTI_TOKEN_COMMANDS, true)) {
+            return $candidate;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @param  list<string>  $argv
+ */
+function nativeArgvHasCommandName(array $argv): bool
+{
+    foreach (array_slice($argv, 1) as $argument) {
+        if ($argument === '--') {
+            return false;
+        }
+
+        if ($argument === '' || str_starts_with($argument, '-')) {
+            continue;
+        }
+
+        return true;
+    }
+
+    return false;
+}
